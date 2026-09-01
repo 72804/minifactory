@@ -1,10 +1,11 @@
 import type { AppConfig } from "@minifactory/config";
 import { getServerEnv } from "@minifactory/config/env";
 import {
+  resolveTelegramPresentation,
   sendTelegramMessage,
+  TelegramAuthError,
   verifyTelegramWebhookSecret,
-} from "@minifactory/notifications";
-import { TelegramAuthError } from "@minifactory/telegram/server";
+} from "@minifactory/telegram/server";
 
 export type TelegramStartCopy = {
   text: string;
@@ -29,10 +30,10 @@ function rememberUpdate(id: number): boolean {
 }
 
 export function defaultTelegramStartCopy(config: AppConfig): TelegramStartCopy {
-  const tagline = config.listing.tagline ?? config.description;
+  const presentation = resolveTelegramPresentation(config);
   return {
-    text: `${config.name}\n\n${tagline}\n\nOpen the Mini App below.`,
-    buttonText: `Open ${config.name}`,
+    text: presentation.startText,
+    buttonText: presentation.startButtonText,
   };
 }
 
@@ -49,17 +50,30 @@ type TelegramUpdate = {
   };
 };
 
-export function isStartCommand(text: string | undefined): boolean {
+export function parseBotCommand(text: string | undefined): string | null {
   if (!text) {
-    return false;
+    return null;
   }
-  return /^\/start(?:@\w+)?(?:\s|$)/i.test(text.trim());
+  const match = /^\/([a-zA-Z0-9_]+)(?:@\w+)?(?:\s|$)/.exec(text.trim());
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
+export function isStartCommand(text: string | undefined): boolean {
+  return parseBotCommand(text) === "start";
 }
 
 export function webAppInlineKeyboard(buttonText: string, url: string) {
   return {
     inline_keyboard: [[{ text: buttonText, web_app: { url } }]],
   };
+}
+
+function privacyReply(config: AppConfig, presentationPrivacy?: string): string {
+  const url = `${miniAppUrl()}${config.privacyUrl.startsWith("/") ? "" : "/"}${config.privacyUrl}`;
+  if (presentationPrivacy) {
+    return `${presentationPrivacy}\n\n${url}`;
+  }
+  return `Privacy information:\n${url}`;
 }
 
 export async function handleTelegramBotUpdate(
@@ -71,17 +85,29 @@ export async function handleTelegramBotUpdate(
   if (typeof updateId === "number" && !rememberUpdate(updateId)) {
     return { handled: false, duplicate: true };
   }
-  const text = update.message?.text;
+  const command = parseBotCommand(update.message?.text);
   const chatId = update.message?.chat?.id;
-  if (!isStartCommand(text) || typeof chatId !== "number") {
+  if (!command || typeof chatId !== "number") {
     return { handled: false, duplicate: false };
   }
   const url = miniAppUrl();
-  await sendTelegramMessage(chatId, copy.text, {
-    replyMarkup: webAppInlineKeyboard(copy.buttonText, url),
-  });
-  console.info("[minifactory] telegram_start", { app: config.slug, hasChat: true });
-  return { handled: true, duplicate: false };
+  const presentation = resolveTelegramPresentation(config);
+  if (command === "start") {
+    await sendTelegramMessage(chatId, copy.text, {
+      replyMarkup: webAppInlineKeyboard(copy.buttonText, url),
+    });
+    console.info("[minifactory] telegram_start", { app: config.slug, hasChat: true });
+    return { handled: true, duplicate: false };
+  }
+  if (command === "help" && presentation.helpText) {
+    await sendTelegramMessage(chatId, presentation.helpText);
+    return { handled: true, duplicate: false };
+  }
+  if (command === "privacy" && presentation.commands.some((item) => item.command === "privacy")) {
+    await sendTelegramMessage(chatId, privacyReply(config, presentation.privacyText));
+    return { handled: true, duplicate: false };
+  }
+  return { handled: false, duplicate: false };
 }
 
 export function createTelegramWebhookRoute(config: AppConfig, copy?: TelegramStartCopy) {

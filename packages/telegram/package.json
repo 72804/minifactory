@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@minifactory/config": "workspace:*"
+    "@minifactory/config": "workspace:*",
+    "sharp": "0.35.4"
   },
   "devDependencies": {
     "@minifactory/eslint-config": "workspace:*",

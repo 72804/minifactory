@@ -72,6 +72,24 @@ export const shellSchema = z.object({
   showHeader: z.boolean().default(true),
 });
 
+export const telegramCommandSchema = z.object({
+  command: z.string().min(1).max(32).regex(/^[a-z0-9_]+$/),
+  description: z.string().min(1).max(256),
+});
+
+export const telegramPresentationSchema = z.object({
+  botName: z.string().min(1).max(64).optional(),
+  shortDescription: z.string().min(1).max(120).optional(),
+  description: z.string().min(1).max(512).optional(),
+  menuButtonText: z.string().min(1).max(16).optional(),
+  profileImage: z.string().min(1).optional(),
+  startText: z.string().min(1).max(4096).optional(),
+  startButtonText: z.string().min(1).max(64).optional(),
+  helpText: z.string().min(1).max(4096).optional(),
+  privacyText: z.string().min(1).max(4096).optional(),
+  commands: z.array(telegramCommandSchema).max(100).optional(),
+});
+
 export const slugSchema = z
   .string()
   .regex(/^[a-z][a-z0-9-]{1,46}[a-z0-9]$/, "Use a lowercase slug like qrmini or lens-mini");
@@ -93,6 +111,7 @@ export const appConfigSchema = z.object({
   analytics: analyticsSchema.default({ enabled: true }),
   monetization: monetizationSchema.default({ enabled: false, products: [] }),
   listing: listingSchema,
+  telegram: telegramPresentationSchema.optional(),
   shell: shellSchema.default({
     showUsage: true,
     showSettings: false,

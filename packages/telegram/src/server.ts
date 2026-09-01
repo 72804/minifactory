@@ -157,3 +157,29 @@ export function verifyTelegramWebhookSecret(request: Request): void {
     throw new TelegramAuthError("Invalid webhook secret", "invalid_hash");
   }
 }
+
+export {
+  botFetch,
+  getBotCommands,
+  getBotDescription,
+  getBotName,
+  getBotShortDescription,
+  getChatMenuButton,
+  getTelegramBotProfile,
+  getTelegramWebhookInfo,
+  sendTelegramMessage,
+  setBotCommands,
+  setBotDescription,
+  setBotName,
+  setBotProfilePhoto,
+  setBotShortDescription,
+  setMiniAppMenuButton,
+  setTelegramMenuButton,
+  setTelegramWebhook,
+} from "./bot-api";
+export type { TelegramBotCommand, TelegramChatMenuButton, TelegramInlineButton, TelegramReplyMarkup } from "./bot-api";
+export { resolveTelegramPresentation } from "./presentation";
+export type { ResolvedTelegramPresentation } from "./presentation";
+export { pngIconToTelegramJpeg, withTempBotProfileJpeg } from "./profile-photo";
+export { configureTelegramBot } from "./setup";
+export type { TelegramSetupReport } from "./setup";

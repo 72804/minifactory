@@ -2,12 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getServerEnv, resetServerEnvCache } from "@minifactory/config/env";
-import {
-  getTelegramBotProfile,
-  getTelegramWebhookInfo,
-  setTelegramMenuButton,
-  setTelegramWebhook,
-} from "@minifactory/notifications";
+import { configureTelegramBot, resolveTelegramPresentation } from "@minifactory/telegram/server";
+import { appConfig } from "../app.config";
 
 const APP_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = resolve(APP_DIR, "../..");
@@ -84,17 +80,25 @@ async function main() {
     );
     return;
   }
-  const webhookUrl = `${base}/api/telegram/webhook`;
-  await setTelegramWebhook(webhookUrl, env.TELEGRAM_WEBHOOK_SECRET);
-  await setTelegramMenuButton(base, "LensMini");
-  const me = await getTelegramBotProfile();
-  const info = await getTelegramWebhookInfo();
+  const presentation = resolveTelegramPresentation(appConfig);
+  const report = await configureTelegramBot({
+    appDir: APP_DIR,
+    webhookUrl: `${base}/api/telegram/webhook`,
+    webhookSecret: env.TELEGRAM_WEBHOOK_SECRET,
+    miniAppUrl: base,
+    presentation,
+  });
   console.log("LensMini Telegram setup complete.");
-  console.log(`bot=@${me.result?.username ?? "(unknown)"}`);
-  console.log(`miniApp=${base}`);
-  console.log(`webhook=${info.result?.url ?? "(missing)"}`);
-  console.log(`pending=${info.result?.pending_update_count ?? "n/a"}`);
-  console.log(`lastError=${info.result?.last_error_message ? "yes" : "none"}`);
+  console.log(`bot=${report.bot}`);
+  console.log(`profilePhoto=${report.profilePhoto}`);
+  console.log(`name=${report.name}`);
+  console.log(`shortDescription=${report.shortDescription}`);
+  console.log(`description=${report.description}`);
+  console.log(`commands=${report.commands}`);
+  console.log(`menuButton=${report.menuButton}`);
+  console.log(`webhook=${report.webhook}`);
+  console.log(`pending=${report.pending}`);
+  console.log(`lastError=${report.lastError}`);
 }
 
 void main().catch((error) => {

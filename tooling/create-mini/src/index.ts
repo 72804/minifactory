@@ -188,6 +188,18 @@ export const appConfig = defineAppConfig({
     category: "utilities",
     keywords: ["${answers.slug}", "telegram", "minifactory"],
   },
+  telegram: {
+    botName: "${name}",
+    shortDescription: "${short}",
+    description: "${description.slice(0, 512)}",
+    menuButtonText: "Open",
+    profileImage: "public/listing/icon.png",
+    commands: [
+      { command: "start", description: "Open ${name}" },
+      { command: "help", description: "How to use ${name}" },
+      { command: "privacy", description: "Privacy information" },
+    ],
+  },
   shell: {
     showUsage: true,
     showSettings: false,

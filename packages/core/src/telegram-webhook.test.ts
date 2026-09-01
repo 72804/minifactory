@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isStartCommand, webAppInlineKeyboard } from "./telegram-webhook";
+import { isStartCommand, parseBotCommand, webAppInlineKeyboard } from "./telegram-webhook";
 
 describe("isStartCommand", () => {
   it("accepts /start and /start@bot", () => {
@@ -12,6 +12,14 @@ describe("isStartCommand", () => {
     expect(isStartCommand("/help")).toBe(false);
     expect(isStartCommand("hello")).toBe(false);
     expect(isStartCommand(undefined)).toBe(false);
+  });
+});
+
+describe("parseBotCommand", () => {
+  it("reads /help and /privacy with an optional bot suffix", () => {
+    expect(parseBotCommand("/help")).toBe("help");
+    expect(parseBotCommand("/privacy@LensMiniBot")).toBe("privacy");
+    expect(parseBotCommand("hello")).toBeNull();
   });
 });
 
