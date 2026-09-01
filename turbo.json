@@ -3,7 +3,16 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": [".next/**", "!.next/cache/**"],
+      "env": [
+        "DATABASE_URL",
+        "TELEGRAM_BOT_TOKEN",
+        "TELEGRAM_WEBHOOK_SECRET",
+        "OPENAI_API_KEY",
+        "OPENAI_VISION_MODEL",
+        "OPENAI_MODEL",
+        "APP_BASE_URL"
+      ]
     },
     "lint": {
       "dependsOn": ["^lint"]

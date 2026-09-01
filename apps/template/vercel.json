@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
   "installCommand": "cd ../.. && pnpm install",
-  "buildCommand": "cd ../.. && pnpm --filter @minifactory/template build"
+  "buildCommand": "cd ../.. && pnpm exec turbo run build --filter=@minifactory/template"
 }
