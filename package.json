@@ -20,6 +20,8 @@
     "db:generate": "prisma generate --schema prisma/schema.prisma",
     "db:validate": "prisma validate --schema prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:migrate:dev": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:migrate:deploy": "tsx tooling/scripts/prisma-migrate-deploy.ts",
     "db:push": "tsx tooling/scripts/require-database-url.ts && prisma db push --schema prisma/schema.prisma",
     "create-mini": "tsx tooling/create-mini/src/index.ts",
     "test": "vitest run",

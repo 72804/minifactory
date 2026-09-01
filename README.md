@@ -10,7 +10,7 @@ This repository is standalone. It does not depend on Luma, Coffee Fal, or CrowdK
 pnpm install
 cp .env.example .env
 # set DATABASE_URL to a PostgreSQL instance
-pnpm db:push
+pnpm db:migrate:dev
 pnpm --filter @minifactory/template dev
 ```
 
@@ -41,6 +41,8 @@ pnpm typecheck
 pnpm build
 pnpm test
 pnpm db:validate
+pnpm db:migrate:dev
+pnpm db:migrate:deploy
 pnpm db:push
 pnpm factory:check
 pnpm factory:prove
@@ -48,5 +50,7 @@ pnpm create-mini <slug>
 ```
 
 `pnpm factory:check` is the static health gate (lint, types, build, unit tests, Prisma validate). It does not mutate a database.
+
+Production schema changes use `pnpm db:migrate:deploy` only. `pnpm db:push` is local prototyping.
 
 `pnpm factory:prove` requires a writable `DATABASE_URL` and exercises mock auth, usage, analytics, and multi-app isolation.

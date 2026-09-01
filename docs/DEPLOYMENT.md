@@ -59,10 +59,22 @@ Deploy `apps/admin` as a separate Vercel project. Set `ADMIN_SECRET` and `DATABA
 
 ## Database
 
-Run Prisma from the factory root (loads root `.env`):
+One PostgreSQL schema is shared by every Mini App. Prisma lives at the factory root.
+
+Development (local Postgres, may already match the schema):
 
 ```bash
-pnpm db:push
+pnpm db:migrate:dev
 ```
 
-or `pnpm db:migrate` after you introduce migrations.
+Production (explicit, never during `next build`):
+
+```bash
+pnpm db:migrate:deploy
+```
+
+`pnpm db:migrate:deploy` uses `DATABASE_URL`. If that URL is a Neon pooled (`-pooler.`) host, the script rewrites it to the direct host for the migrate process only. Runtime Vercel `DATABASE_URL` stays pooled.
+
+`pnpm db:push` remains for throwaway local prototyping. Do not use it against production.
+
+`prisma generate` runs on install/build. Vercel deploys must not run `migrate dev` or `db push`.
