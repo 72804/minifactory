@@ -154,6 +154,9 @@ importers:
       '@minifactory/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications
+      '@minifactory/payments':
+        specifier: workspace:*
+        version: link:../../packages/payments
       '@minifactory/telegram':
         specifier: workspace:*
         version: link:../../packages/telegram
@@ -459,6 +462,9 @@ importers:
       '@minifactory/db':
         specifier: workspace:*
         version: link:../db
+      '@minifactory/telegram':
+        specifier: workspace:*
+        version: link:../telegram
     devDependencies:
       '@minifactory/eslint-config':
         specifier: workspace:*

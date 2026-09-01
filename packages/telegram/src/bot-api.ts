@@ -89,7 +89,7 @@ export async function setTelegramWebhook(url: string, secretToken?: string) {
   return botFetch("setWebhook", {
     url,
     secret_token: secretToken ?? getServerEnv().TELEGRAM_WEBHOOK_SECRET,
-    allowed_updates: ["message"],
+    allowed_updates: ["message", "pre_checkout_query"],
     drop_pending_updates: false,
   });
 }
@@ -149,11 +149,46 @@ export async function setMiniAppMenuButton(webAppUrl: string, text = "Open") {
   });
 }
 
+export const setTelegramMenuButton = setMiniAppMenuButton;
+
 export async function getChatMenuButton() {
   return botFetch<TelegramChatMenuButton>("getChatMenuButton");
 }
 
-export const setTelegramMenuButton = setMiniAppMenuButton;
+export async function createInvoiceLink(input: {
+  title: string;
+  description: string;
+  payload: string;
+  currency?: "XTR";
+  prices: Array<{ label: string; amount: number }>;
+}) {
+  return botFetch<string>("createInvoiceLink", {
+    title: input.title,
+    description: input.description,
+    payload: input.payload,
+    currency: input.currency ?? "XTR",
+    prices: input.prices,
+  });
+}
+
+export async function answerPreCheckoutQuery(input: {
+  preCheckoutQueryId: string;
+  ok: boolean;
+  errorMessage?: string;
+}) {
+  return botFetch("answerPreCheckoutQuery", {
+    pre_checkout_query_id: input.preCheckoutQueryId,
+    ok: input.ok,
+    ...(input.ok ? {} : { error_message: input.errorMessage ?? "This purchase is no longer valid." }),
+  });
+}
+
+export async function refundStarPayment(input: { userId: number; telegramPaymentChargeId: string }) {
+  return botFetch("refundStarPayment", {
+    user_id: input.userId,
+    telegram_payment_charge_id: input.telegramPaymentChargeId,
+  });
+}
 
 export async function setBotProfilePhoto(jpeg: Buffer) {
   const form = new FormData();

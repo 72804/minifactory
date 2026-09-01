@@ -221,9 +221,9 @@ describe.skipIf(!dbReady())("POST /api/translate", { timeout: 30_000 }, () => {
       { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
       telegramId,
     );
-    expect(sixth.status).toBe(429);
+    expect(sixth.status).toBe(402);
     const json = (await sixth.json()) as { code: string };
-    expect(json.code).toBe("usage_limit");
+    expect(json.code).toBe("payment_required");
   });
 
   it("does not consume quota when the image is rejected before the provider", async () => {
@@ -244,7 +244,7 @@ describe.skipIf(!dbReady())("POST /api/translate", { timeout: 30_000 }, () => {
       { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
       telegramId,
     );
-    expect(sixth.status).toBe(429);
+    expect(sixth.status).toBe(402);
   });
 
   it("consumes quota for a successful no-text provider result", async () => {
@@ -308,7 +308,7 @@ describe.skipIf(!dbReady())("POST /api/translate", { timeout: 30_000 }, () => {
       { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
       telegramId,
     );
-    expect(sixth.status).toBe(429);
+    expect(sixth.status).toBe(402);
   });
 
   it("keeps the last concurrent credit safe", async () => {
@@ -325,12 +325,12 @@ describe.skipIf(!dbReady())("POST /api/translate", { timeout: 30_000 }, () => {
       translate({ targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" }, telegramId),
     ]);
     const statuses = racing.map((response) => response.status).sort();
-    expect(statuses).toEqual([200, 429]);
+    expect(statuses).toEqual([200, 402]);
     const leftover = await translate(
       { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
       telegramId,
     );
-    expect(leftover.status).toBe(429);
+    expect(leftover.status).toBe(402);
   });
 
   it("returns a safe public error when the provider fails", async () => {

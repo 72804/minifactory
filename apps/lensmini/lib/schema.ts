@@ -93,6 +93,7 @@ export function publicErrorMessage(code: string): string {
     case "too_large":
       return "That image is too large. Try another photo.";
     case "usage_limit":
+    case "payment_required":
       return "You've used your 5 free translations today.";
     case "unsupported_language":
       return "That language isn't supported yet.";

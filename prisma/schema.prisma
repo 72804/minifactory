@@ -20,6 +20,8 @@ model App {
   analyticsEvents AnalyticsEvent[]
   referrals       Referral[]
   purchases       Purchase[]
+  creditBalances  CreditBalance[]
+  entitlements    Entitlement[]
   translations    Translation[]
 }
 
@@ -41,6 +43,8 @@ model User {
   referralsGiven      Referral[]       @relation("Referrer")
   referralsReceived   Referral[]       @relation("Referee")
   purchases           Purchase[]
+  creditBalances      CreditBalance[]
+  entitlements        Entitlement[]
   translations        Translation[]
 }
 
@@ -124,17 +128,22 @@ model Referral {
 }
 
 model Purchase {
-  id                String   @id @default(cuid())
-  appId             String
-  userId            String
-  productId         String
-  provider          String   @default("telegram_stars")
-  externalPaymentId String?
-  amount            Int
-  currency          String   @default("XTR")
-  status            String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                      String    @id @default(cuid())
+  appId                   String
+  userId                  String
+  productId               String
+  provider                String    @default("telegram_stars")
+  payload                 String?   @unique
+  externalPaymentId       String?
+  telegramPaymentChargeId String?   @unique
+  providerPaymentChargeId String?
+  amount                  Int
+  currency                String    @default("XTR")
+  status                  String
+  grant                   Json?
+  fulfilledAt             DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   app  App  @relation(fields: [appId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -142,6 +151,37 @@ model Purchase {
   @@unique([provider, externalPaymentId])
   @@index([appId, userId, status])
   @@index([appId, createdAt])
+}
+
+model CreditBalance {
+  id        String   @id @default(cuid())
+  appId     String
+  userId    String
+  feature   String
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  app  App  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([appId, userId, feature])
+}
+
+model Entitlement {
+  id        String    @id @default(cuid())
+  appId     String
+  userId    String
+  productId String
+  status    String    @default("active")
+  startsAt  DateTime
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  app  App  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([appId, userId, status, expiresAt])
 }
 
 model Translation {

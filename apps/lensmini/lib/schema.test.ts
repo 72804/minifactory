@@ -40,5 +40,6 @@ describe("publicErrorMessage", () => {
     expect(publicErrorMessage("failed")).toBe("Couldn't translate this. Try again.");
     expect(publicErrorMessage("no_text")).toMatch(/No readable text found/);
     expect(publicErrorMessage("usage_limit")).toBe("You've used your 5 free translations today.");
+    expect(publicErrorMessage("payment_required")).toBe("You've used your 5 free translations today.");
   });
 });

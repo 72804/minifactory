@@ -2,9 +2,11 @@ import type { AppConfig } from "@minifactory/config";
 import { prisma } from "@minifactory/db";
 import { track } from "@minifactory/analytics/server";
 import { authenticateTelegramRequest } from "@minifactory/telegram/server";
+import { getAccessStatus } from "./access";
+import type { AccessDecision } from "./access";
 import { ensureAppRecord } from "./app-record";
 import { attributeReferral, touchAppUser, upsertTelegramUser } from "./identity";
-import { getUsage, primaryUsageFeature, type UsageDecision } from "./usage";
+import { primaryUsageFeature } from "./usage";
 
 export type MiniSession = {
   app: { id: string; slug: string; name: string };
@@ -15,7 +17,7 @@ export type MiniSession = {
     languageCode?: string | null;
   };
   appUser: { id: string; openCount: number; firstSeen: boolean };
-  usage: UsageDecision;
+  usage: AccessDecision;
   mock: boolean;
 };
 
@@ -32,7 +34,7 @@ async function loadIdentity(request: Request, config: AppConfig, feature: string
     userId: user.id,
     startParam: auth.startParam,
   });
-  const usage = await getUsage({ config, appId: app.id, userId: user.id, feature });
+  const usage = await getAccessStatus({ config, appId: app.id, userId: user.id, feature });
   console.info("[minifactory] identity", {
     app: config.slug,
     mock: auth.mock,

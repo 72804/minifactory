@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@minifactory/config": "workspace:*",
-    "@minifactory/db": "workspace:*"
+    "@minifactory/db": "workspace:*",
+    "@minifactory/telegram": "workspace:*"
   },
   "devDependencies": {
     "@minifactory/eslint-config": "workspace:*",

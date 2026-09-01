@@ -504,6 +504,73 @@ html:has([data-app="lensmini"]) body {
   justify-items: center;
 }
 
+.lm-paywall {
+  display: grid;
+  gap: 10px;
+}
+
+.lm-pack {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--lens-border);
+  background:
+    linear-gradient(180deg, rgb(28 24 48 / 0.95), rgb(16 14 32 / 0.95));
+  color: var(--lens-text);
+  box-shadow: var(--lens-glow-purple);
+}
+
+.lm-pack:disabled {
+  opacity: 0.7;
+}
+
+.lm-pack-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+}
+
+.lm-pack-title em {
+  font-style: normal;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: #041016;
+  background: var(--lens-cyan);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.lm-pack-copy {
+  color: var(--lens-text-muted);
+  font-size: 0.86rem;
+}
+
+.lm-pack-price {
+  color: var(--lens-cyan);
+  font-weight: 700;
+}
+
+.lm-purchase-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.lm-purchase-list li {
+  display: grid;
+  gap: 2px;
+}
+
+.lm-purchase-list span {
+  color: var(--lens-text-muted);
+  font-size: 0.86rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lm-shutter,
   .mf-sheet,

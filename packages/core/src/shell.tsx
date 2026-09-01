@@ -36,12 +36,12 @@ import {
   UpgradeSheet,
   UsageBadge,
 } from "@minifactory/ui";
+import type { AccessDecision } from "./access";
 import type { MiniSession } from "./session";
-import type { UsageDecision } from "./usage";
 
 type SessionContextValue = {
   session: MiniSession;
-  setUsage: (usage: UsageDecision) => void;
+  setUsage: (usage: AccessDecision) => void;
 };
 
 const MiniSessionContext = createContext<SessionContextValue | null>(null);
@@ -103,7 +103,7 @@ class MiniErrorBoundary extends Component<{ children: ReactNode }, { error: stri
 export function AppShell({ config, children }: ShellProps) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [paywall, setPaywall] = useState(false);
-  const [usageOverride, setUsageOverride] = useState<UsageDecision | null>(null);
+  const [usageOverride, setUsageOverride] = useState<AccessDecision | null>(null);
 
   useEffect(() => {
     const root = document.documentElement;

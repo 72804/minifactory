@@ -9,7 +9,7 @@ export type UsageDecision = {
   allowed: boolean;
   remaining: number;
   limit: number | null;
-  reason?: "unlimited" | "premium" | "quota_exceeded" | "unconfigured" | "ok";
+  reason?: "unlimited" | "premium" | "quota_exceeded" | "unconfigured" | "ok" | "payment_required";
   periodKey?: string;
 };
 

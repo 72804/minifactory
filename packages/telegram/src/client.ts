@@ -49,6 +49,8 @@ type TelegramHaptic = {
   selectionChanged: () => void;
 };
 
+export type InvoiceClosedStatus = "paid" | "cancelled" | "failed" | "pending";
+
 export type TelegramWebApp = {
   initData: string;
   version?: string;
@@ -76,6 +78,7 @@ export type TelegramWebApp = {
   close: () => void;
   openTelegramLink: (url: string) => void;
   openLink: (url: string) => void;
+  openInvoice?: (url: string, callback?: (status: InvoiceClosedStatus) => void) => void;
   MainButton: TelegramMainButton;
   BackButton: TelegramBackButton;
   HapticFeedback: TelegramHaptic;
@@ -188,6 +191,22 @@ export function telegramAuthHeaders(): HeadersInit {
 
 export function closeMiniApp(): void {
   getTelegramWebApp()?.close();
+}
+
+/** Client invoiceClosed must never grant credits. Server webhook fulfillment is required. */
+export function clientInvoiceStatusMayGrant(_status: InvoiceClosedStatus | string): boolean {
+  return false;
+}
+
+export function openInvoice(url: string): Promise<InvoiceClosedStatus> {
+  const webApp = getTelegramWebApp();
+  const open = webApp?.openInvoice;
+  if (!open) {
+    return Promise.reject(new Error("Telegram invoices are not available in this client."));
+  }
+  return new Promise((resolve) => {
+    open.call(webApp, url, (status) => resolve(status));
+  });
 }
 
 export function openTelegramLink(url: string): void {

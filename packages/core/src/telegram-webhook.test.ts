@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isStartCommand, parseBotCommand, telegramPublicAssetUrl, webAppInlineKeyboard } from "./telegram-webhook";
+import { isStartCommand, parseBotCommand, paymentSupportMessage, telegramPublicAssetUrl, webAppInlineKeyboard } from "./telegram-webhook";
 
 describe("isStartCommand", () => {
   it("accepts /start and /start@bot", () => {
@@ -19,6 +19,8 @@ describe("parseBotCommand", () => {
   it("reads /help and /privacy with an optional bot suffix", () => {
     expect(parseBotCommand("/help")).toBe("help");
     expect(parseBotCommand("/privacy@LensMiniBot")).toBe("privacy");
+    expect(parseBotCommand("/terms")).toBe("terms");
+    expect(parseBotCommand("/paysupport")).toBe("paysupport");
     expect(parseBotCommand("hello")).toBeNull();
   });
 });
@@ -32,6 +34,19 @@ describe("LensMini /start web app markup", () => {
       ],
     });
     expect("keyboard" in markup).toBe(false);
+  });
+});
+
+describe("paymentSupportMessage", () => {
+  it("uses the configured support contact and does not invent a private handle", () => {
+    const message = paymentSupportMessage({
+      name: "LensMini",
+      supportContact: "@lensmini_support",
+    } as never);
+    expect(message).toContain("Need help with a LensMini purchase?");
+    expect(message).toContain("Contact: @lensmini_support");
+    expect(message).toContain("Please include the approximate purchase time and product.");
+    expect(message).toContain("Telegram support cannot resolve purchases made through LensMini.");
   });
 });
 

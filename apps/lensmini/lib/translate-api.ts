@@ -1,6 +1,6 @@
 import { analyzeImageStructured, createAIProvider, generateStructured, AIProviderError, type AIProvider } from "@minifactory/ai/server";
 import { track } from "@minifactory/analytics/server";
-import { requireIdentity, consumeUsage, refundUsage, UsageLimitError } from "@minifactory/core/server";
+import { requireIdentity, consumeAccess, refundAccess, PaymentRequiredError, UsageLimitError } from "@minifactory/core/server";
 import { MediaValidationError, OCR_IMAGE_LIMITS, decodeBase64Image, validateOcrImageBuffer } from "@minifactory/media/server";
 import { TelegramAuthError } from "@minifactory/telegram/server";
 import { ZodError } from "zod";
@@ -149,7 +149,7 @@ export async function handleTranslateRequest(
   }
 
   try {
-    const usage = await consumeUsage({
+    const usage = await consumeAccess({
       config: appConfig,
       appId: session.app.id,
       userId: session.user.id,
@@ -185,10 +185,12 @@ export async function handleTranslateRequest(
             ),
       );
     } catch (error) {
-      await refundUsage({
+      await refundAccess({
+        config: appConfig,
         appId: session.app.id,
         userId: session.user.id,
         feature: TRANSLATE_FEATURE,
+        source: usage.source ?? "free",
       });
       throw error;
     }
@@ -239,10 +241,12 @@ export async function handleTranslateRequest(
         keep: HISTORY_MAX,
       });
     } catch (error) {
-      await refundUsage({
+      await refundAccess({
+        config: appConfig,
         appId: session.app.id,
         userId: session.user.id,
         feature: TRANSLATE_FEATURE,
+        source: usage.source ?? "free",
       });
       throw error;
     }
@@ -259,6 +263,22 @@ export async function handleTranslateRequest(
           providerMs,
         },
       });
+      if (usage.source === "credit") {
+        await track({
+          appId: session.app.id,
+          userId: session.user.id,
+          name: "purchased_credit_consumed",
+          metadata: { entitlementType: "credit" },
+        });
+      }
+      if (usage.source === "pro") {
+        await track({
+          appId: session.app.id,
+          userId: session.user.id,
+          name: "pro_translation_consumed",
+          metadata: { entitlementType: "pro" },
+        });
+      }
     }
 
     console.info("[lensmini] translate", {
@@ -275,7 +295,7 @@ export async function handleTranslateRequest(
     });
     return json({ ...result, usage, providerMs });
   } catch (error) {
-    if (error instanceof UsageLimitError) {
+    if (error instanceof PaymentRequiredError || error instanceof UsageLimitError) {
       if (appConfig.analytics.enabled) {
         await track({
           appId: session.app.id,
@@ -289,16 +309,16 @@ export async function handleTranslateRequest(
         mode,
         inputMethod,
         sentImage: Boolean(body.imageBase64),
-        code: "usage_limit",
+        code: "payment_required",
       });
       return json(
         {
-          error: publicErrorMessage("usage_limit"),
-          code: "usage_limit",
+          error: publicErrorMessage("payment_required"),
+          code: "payment_required",
           usage: error.decision,
           limit: TRANSLATE_FREE_PER_DAY,
         },
-        429,
+        402,
       );
     }
     if (appConfig.analytics.enabled) {

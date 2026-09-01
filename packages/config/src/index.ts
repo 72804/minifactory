@@ -55,11 +55,16 @@ export const monetizationProductSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   priceStars: z.number().int().positive(),
-  type: z.enum(["consumable", "daily_unlock", "subscription_like", "lifetime"]),
+  type: z.enum(["consumable", "period_entitlement", "daily_unlock", "subscription_like", "lifetime"]),
+  grantCredits: z.number().int().positive().optional(),
+  periodDays: z.number().int().positive().optional(),
+  dailyLimit: z.number().int().positive().optional(),
+  badge: z.string().max(40).optional(),
 });
 
 export const monetizationSchema = z.object({
   enabled: z.boolean().default(false),
+  currency: z.literal("XTR").default("XTR"),
   products: z.array(monetizationProductSchema).default([]),
 });
 
@@ -139,7 +144,7 @@ export const CAPABILITY_STATUS = {
   telegramAuth: "implemented",
   database: "implemented",
   referrals: "implemented",
-  payments: "partial",
+  payments: "implemented",
   ads: "partial",
   ai: "implemented",
   camera: "implemented",

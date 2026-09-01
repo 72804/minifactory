@@ -30,11 +30,23 @@ import { loadRecentTargets, loadSavedTargetLanguage, saveTargetLanguage } from "
 import { canSpeak, speakText, stopSpeaking } from "../lib/speech";
 import type { TranslationResult } from "../lib/schema";
 import { LanguageButton, LanguagePicker } from "./language-picker";
+import { quotaLabel } from "../lib/quota-label";
+import { purchaseSuccessCopy, startProductPurchase } from "../lib/purchase-flow";
 import { reportDeviceDiag } from "../lib/diagnostics";
 
 type Screen = "camera" | "result" | "history";
 type InputMethod = "camera" | "upload";
-type UsageInfo = { remaining: number; limit: number | null };
+type UsageInfo = {
+  remaining: number;
+  limit: number | null;
+  credits?: number;
+  proActive?: boolean;
+  proExpiresAt?: string | null;
+  proRemainingToday?: number | null;
+  proLimit?: number | null;
+  freeRemaining?: number;
+  freeLimit?: number | null;
+};
 
 type TranslateSuccess = TranslationResult & { usage?: UsageInfo; providerMs?: number };
 type TranslateFailure = {
@@ -53,6 +65,14 @@ type HistoryItem = {
   createdAt: string;
 };
 
+type PurchaseRow = {
+  product: string;
+  stars: number;
+  currency: string;
+  status: string;
+  date: string;
+};
+
 const FAIL_COPY = "Couldn't translate this. Try again.";
 
 export function LensApp() {
@@ -68,6 +88,10 @@ export function LensApp() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [limitOpen, setLimitOpen] = useState(false);
+  const [purchasesOpen, setPurchasesOpen] = useState(false);
+  const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
+  const [payBusy, setPayBusy] = useState(false);
+  const [payStatus, setPayStatus] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<"denied" | "unavailable" | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
@@ -202,12 +226,28 @@ export function LensApp() {
   function applyUsage(usage?: UsageInfo) {
     if (usage) {
       setUsage({
-        allowed: usage.remaining > 0,
+        allowed: usage.remaining > 0 || Boolean(usage.proActive && (usage.proRemainingToday ?? 0) > 0) || (usage.credits ?? 0) > 0,
         remaining: usage.remaining,
         limit: usage.limit,
         reason: usage.remaining > 0 ? "ok" : "quota_exceeded",
+        credits: usage.credits ?? 0,
+        proActive: Boolean(usage.proActive),
+        proExpiresAt: usage.proExpiresAt ?? null,
+        proRemainingToday: usage.proRemainingToday ?? null,
+        proLimit: usage.proLimit ?? null,
+        freeRemaining: usage.freeRemaining ?? usage.remaining,
+        freeLimit: usage.freeLimit ?? usage.limit,
       });
     }
+  }
+
+  async function refreshAccess() {
+    const response = await factoryFetch("/api/mf/session", { method: "POST" });
+    if (!response.ok) {
+      return;
+    }
+    const next = (await response.json()) as { usage: UsageInfo };
+    applyUsage(next.usage);
   }
 
   async function submitImage(blob: Blob, method: InputMethod) {
@@ -267,7 +307,7 @@ export function LensApp() {
         providerMs: payload.providerMs ?? null,
         code: payload.code ?? (response.ok ? "ok" : "failed"),
       });
-      if (response.status === 429) {
+      if (response.status === 402 || response.status === 429) {
         void track("paywall_view");
         setLimitOpen(true);
         hapticNotification("warning");
@@ -343,7 +383,7 @@ export function LensApp() {
         providerMs: payload.providerMs ?? null,
         code: payload.code ?? (response.ok ? "ok" : "failed"),
       });
-      if (response.status === 429) {
+      if (response.status === 402 || response.status === 429) {
         void track("paywall_view");
         setLimitOpen(true);
         setToast(payload.error);
@@ -402,6 +442,64 @@ export function LensApp() {
     }
   }
 
+  async function openPurchases() {
+    setMenuOpen(false);
+    setPurchasesOpen(true);
+    try {
+      const response = await factoryFetch("/api/payments/history");
+      const payload = (await response.json()) as { items?: PurchaseRow[] };
+      setPurchases(payload.items ?? []);
+    } catch {
+      setToast("Could not load purchases");
+    }
+  }
+
+  async function buyProduct(productId: string) {
+    if (payBusy) {
+      return;
+    }
+    setPayBusy(true);
+    setPayStatus(null);
+    void track("product_selected", { productId });
+    try {
+      void track("invoice_opened", { productId });
+      const result = await startProductPurchase(productId);
+      if (result.status === "cancelled") {
+        void track("invoice_cancelled", { productId });
+        setPayStatus(null);
+        return;
+      }
+      if (result.status === "failed") {
+        void track("invoice_failed", { productId });
+        setPayStatus(result.message);
+        hapticNotification("error");
+        return;
+      }
+      if (result.status === "pending") {
+        void track("payment_pending", { productId });
+        setPayStatus(result.message);
+        return;
+      }
+      setPayStatus("Payment received. Activating…");
+      if (result.status === "delayed") {
+        void track("purchase_fulfillment_delayed", { productId });
+        setPayStatus("Payment received. Your translations will appear shortly.");
+        await refreshAccess();
+        return;
+      }
+      hapticNotification("success");
+      setToast(purchaseSuccessCopy(productId));
+      await refreshAccess();
+      setLimitOpen(false);
+      setPayStatus(null);
+    } catch {
+      setPayStatus("Payment didn't go through.");
+      hapticNotification("error");
+    } finally {
+      setPayBusy(false);
+    }
+  }
+
   async function openHistory() {
     void track("history_opened");
     setScreen("history");
@@ -415,10 +513,7 @@ export function LensApp() {
   }
 
   const usage = session.usage;
-  const quotaLabel =
-    usage.limit === null
-      ? "Unlimited"
-      : `${Number.isFinite(usage.remaining) ? usage.remaining : usage.limit} / ${usage.limit} free`;
+  const headerQuota = quotaLabel(usage);
 
   const cameraDenied = cameraError === "denied";
   const cameraUnavailable = cameraError === "unavailable";
@@ -432,8 +527,8 @@ export function LensApp() {
             <p className="lm-tagline">Point. Translate. Done.</p>
           </div>
         </div>
-        <span className="lm-quota" aria-label={`${quotaLabel} translations`}>
-          {quotaLabel}
+        <span className="lm-quota" aria-label={`${headerQuota} translations`}>
+          {headerQuota}
         </span>
       </header>
   );
@@ -670,15 +765,56 @@ export function LensApp() {
           >
             Share LensMini
           </Button>
+          <Button variant="ghost" onClick={() => void openPurchases()}>
+            Purchases
+          </Button>
           <Button variant="ghost" onClick={() => router.push("/privacy")}>
             Privacy
           </Button>
         </div>
       </BottomSheet>
-      <BottomSheet open={limitOpen} title="Daily limit reached" onClose={() => setLimitOpen(false)}>
-        <p>You&apos;ve used your 5 free translations today.</p>
-        <p className="lm-muted">More translations are coming soon.</p>
-        <Button onClick={() => setLimitOpen(false)}>OK</Button>
+      <BottomSheet open={limitOpen} title="KEEP TRANSLATING" onClose={() => setLimitOpen(false)}>
+        <div className="lm-paywall">
+          <p>Your {appConfig.limits.features.translate?.freePerDay ?? 5} free translations reset daily.</p>
+          {appConfig.monetization.products.map((product) => (
+            <button
+              key={product.id}
+              type="button"
+              className="lm-pack"
+              disabled={payBusy}
+              onClick={() => void buyProduct(product.id)}
+            >
+              <span className="lm-pack-title">
+                {product.id === "lens_pro_30d" ? "LensMini Pro" : product.title}
+                {product.badge ? <em>{product.badge}</em> : null}
+              </span>
+              <span className="lm-pack-copy">{product.description}</span>
+              <span className="lm-pack-price">
+                {product.priceStars} <span aria-hidden="true">⭐</span>
+              </span>
+            </button>
+          ))}
+          {payStatus ? <p className="lm-muted">{payStatus}</p> : null}
+          <Button variant="ghost" onClick={() => setLimitOpen(false)}>
+            Not now
+          </Button>
+        </div>
+      </BottomSheet>
+      <BottomSheet open={purchasesOpen} title="Purchases" onClose={() => setPurchasesOpen(false)}>
+        {purchases.length === 0 ? (
+          <p className="lm-muted">No purchases yet.</p>
+        ) : (
+          <ul className="lm-purchase-list">
+            {purchases.map((item, index) => (
+              <li key={`${item.product}-${item.date}-${index}`}>
+                <strong>{item.product}</strong>
+                <span>
+                  {item.stars} ⭐ · {new Date(item.date).toLocaleDateString()} · {item.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </BottomSheet>
       <Toast message={toast} />
     </div>
