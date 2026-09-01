@@ -15,9 +15,11 @@ Building Mini App #25 should mean writing `app.config.ts`, a few screens, and on
 5. **Telegram identity is server-validated.** Clients send `Authorization: tma <initData>`. The server HMAC-checks it with `TELEGRAM_BOT_TOKEN`. Mock auth (`tma-mock`) requires non-production `ALLOW_TELEGRAM_MOCK=true` and never runs in production.
 6. **Route re-exports.** Shared handlers live in `@minifactory/core/server`. Each app keeps thin `app/api/mf/*` files so Vercel still has app-local routes.
 7. **Payments grant on webhook confirmation only.** Client payment callbacks are not trusted.
-8. **Ads and AI are provider interfaces.** Real networks/keys stay server-side and swappable. No provider SDK is wired yet except a minimal optional OpenAI server call.
+8. **Ads and AI are provider interfaces.** OpenAI Responses vision is wired in `@minifactory/ai` for apps with capability `ai`. Keys stay server-side.
 9. **Admin is a separate app.** Cross-app analytics must not ship inside consumer Mini Apps.
 10. **No Cache Components, Redis, queues, or Kubernetes.** Mini Apps are per-user and request-driven. Extra infra is postponed until a concrete app needs it.
+11. **Vercel ignored builds use `turbo-ignore @minifactory/<slug>`.** Shared-package changes still redeploy dependents; unrelated apps should skip.
+
 
 ## Package map
 

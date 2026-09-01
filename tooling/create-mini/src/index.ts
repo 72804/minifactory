@@ -205,6 +205,7 @@ function writeVercelConfig(targetDir: string, slug: string) {
       framework: "nextjs",
       installCommand: "cd ../.. && pnpm install",
       buildCommand: `cd ../.. && pnpm exec turbo run build --filter=@minifactory/${slug}`,
+      ignoreCommand: `cd ../.. && npx turbo-ignore @minifactory/${slug}`,
     },
     null,
     2,

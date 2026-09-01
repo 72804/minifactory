@@ -38,6 +38,7 @@ export const ENV_GROUPS = {
     "OPENAI_VISION_MODEL",
     "BLOB_READ_WRITE_TOKEN",
     "ADS_PROVIDER",
+    "DIRECT_URL",
   ] as const,
   publicBrowser: ["NEXT_PUBLIC_TELEGRAM_MOCK", "NEXT_PUBLIC_APP_SLUG", "NEXT_PUBLIC_TELEGRAM_BOT_USERNAME"] as const,
   developmentOnly: ["ALLOW_TELEGRAM_MOCK", "NEXT_PUBLIC_TELEGRAM_MOCK"] as const,

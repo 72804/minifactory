@@ -26,6 +26,7 @@
     "create-mini": "tsx tooling/create-mini/src/index.ts",
     "test": "vitest run",
     "factory:check": "tsx tooling/scripts/factory-check.ts",
+    "app:doctor": "tsx tooling/scripts/app-doctor.ts",
     "factory:prove": "tsx tooling/scripts/factory-prove.ts",
     "postinstall": "prisma generate --schema prisma/schema.prisma"
   },

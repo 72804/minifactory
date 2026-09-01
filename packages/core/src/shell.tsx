@@ -62,6 +62,7 @@ type ShellProps = {
 type LoadState =
   | { status: "loading" }
   | { status: "ready"; session: MiniSession }
+  | { status: "telegram-required" }
   | { status: "error"; message: string };
 
 function authHeader(): HeadersInit {
@@ -120,7 +121,15 @@ export function AppShell({ config, children }: ShellProps) {
     async function boot() {
       try {
         initTelegramApp();
-        await waitForTelegramInitData();
+        const initData = await waitForTelegramInitData();
+        const mockAllowed =
+          process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_TELEGRAM_MOCK === "true";
+        if (!initData && !mockAllowed) {
+          if (!cancelled) {
+            setState({ status: "telegram-required" });
+          }
+          return;
+        }
         console.info("[minifactory] telegram_boot", describeTelegramClientAuth());
         const response = await factoryFetch("/api/mf/session", { method: "POST" });
         if (!response.ok) {
@@ -131,6 +140,13 @@ export function AppShell({ config, children }: ShellProps) {
           setState({ status: "ready", session });
         }
       } catch (error) {
+        const initData = getTelegramWebApp()?.initData?.trim();
+        if (!initData && process.env.NODE_ENV === "production") {
+          if (!cancelled) {
+            setState({ status: "telegram-required" });
+          }
+          return;
+        }
         if (!cancelled) {
           setState({
             status: "error",
@@ -162,6 +178,29 @@ export function AppShell({ config, children }: ShellProps) {
       <div className="mf-shell">
         <div className="mf-center">
           <Spinner />
+        </div>
+      </div>
+    );
+  }
+
+  if (state.status === "telegram-required") {
+    const bot = config.botUsername.replace(/^@/, "");
+    return (
+      <div className="mf-shell">
+        <div className="mf-center" style={{ gap: 12, padding: 24, textAlign: "center" }}>
+          <strong>{config.name} works inside Telegram</strong>
+          <p style={{ color: "var(--mf-muted)", margin: 0 }}>
+            {config.slug === "lensmini"
+              ? `Open LensMini from @${bot} to start translating.`
+              : `Open ${config.name} from @${bot}.`}
+          </p>
+          <Button
+            onClick={() => {
+              openTelegramLink(buildMiniAppLink(bot));
+            }}
+          >
+            Open in Telegram
+          </Button>
         </div>
       </div>
     );

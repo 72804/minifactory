@@ -1,5 +1,6 @@
 {
   "framework": "nextjs",
   "installCommand": "cd ../.. && pnpm install",
-  "buildCommand": "cd ../.. && pnpm exec turbo run build --filter=@minifactory/lensmini"
+  "buildCommand": "cd ../.. && pnpm exec turbo run build --filter=@minifactory/lensmini",
+  "ignoreCommand": "cd ../.. && npx turbo-ignore @minifactory/lensmini"
 }

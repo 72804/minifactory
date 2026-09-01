@@ -45,6 +45,20 @@ pnpm --filter @minifactory/myapp dev
 
 Set `TELEGRAM_BOT_TOKEN` per bot. Production apps must not share a live token.
 
+## Launch sequence
+
+```bash
+pnpm create-mini <slug>
+# implement the Mini App
+pnpm app:doctor <slug>
+git add … && git commit && git push
+```
+
+Then in Vercel: new project, Root Directory `apps/<slug>`, production env, deploy. If Prisma migrations changed, run `pnpm db:migrate:deploy` against production **once** (uses `DIRECT_URL` when set). Set `APP_BASE_URL`, run `telegram:setup`, test on a phone inside Telegram, add listing screenshots, submit FindMini manually.
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+
 ## What is copied vs imported
 
 Roughly **20–25 small files (~400–600 lines)** are generated, mostly Next/ESLint bootstrap plus the demo process screen. The production behavior lives in `packages/*` (thousands of lines, imported).

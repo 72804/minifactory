@@ -1,6 +1,6 @@
 # FindMini listing — LensMini
 
-Do not submit until real-device screenshots are captured. Do not use placeholder or fabricated screenshots.
+Do not submit until `apps/lensmini/public/listing/` contains real-device screenshots. Do not fabricate screenshots.
 
 ## Name
 
@@ -34,8 +34,8 @@ AI
 Place production screenshots in `apps/lensmini/public/listing/` after a real Telegram phone session:
 
 - `icon.png`
-- `screenshot-1.png`
-- `screenshot-2.png`
-- `screenshot-3.png`
+- `screenshot-1.png` — camera screen
+- `screenshot-2.png` — successful Turkish → English result
+- `screenshot-3.png` — history or language selector
 
-These files are not in the repository yet on purpose.
+Do not submit automatically.

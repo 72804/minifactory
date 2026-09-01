@@ -1,5 +1,6 @@
 {
   "framework": "nextjs",
   "installCommand": "cd ../.. && pnpm install",
-  "buildCommand": "cd ../.. && pnpm exec turbo run build --filter=@minifactory/template"
+  "buildCommand": "cd ../.. && pnpm exec turbo run build --filter=@minifactory/template",
+  "ignoreCommand": "cd ../.. && npx turbo-ignore @minifactory/template"
 }
