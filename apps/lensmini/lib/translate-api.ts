@@ -320,6 +320,9 @@ export async function handleTranslateRequest(
         {
           providerStatus: error instanceof AIProviderError ? (error.providerStatus ?? null) : null,
           providerType: error instanceof AIProviderError ? (error.providerType ?? null) : null,
+          providerCode: error instanceof AIProviderError ? (error.providerCode ?? null) : null,
+          providerParam: error instanceof AIProviderError ? (error.providerParam ?? null) : null,
+          safeMessage: error instanceof AIProviderError ? (error.safeMessage ?? null) : null,
           model: AI_MODELS.vision,
           provider: provider.id,
         },

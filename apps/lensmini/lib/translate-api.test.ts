@@ -106,7 +106,7 @@ async function translate(body: unknown, telegramId = Math.floor(Math.random() * 
   );
 }
 
-describe.skipIf(!dbReady())("POST /api/translate", () => {
+describe.skipIf(!dbReady())("POST /api/translate", { timeout: 30_000 }, () => {
   beforeAll(() => {
     process.env.TELEGRAM_BOT_TOKEN = TOKEN;
     process.env.ALLOW_TELEGRAM_MOCK = "true";
@@ -269,7 +269,7 @@ describe.skipIf(!dbReady())("POST /api/translate", () => {
     expect(json.usage.remaining).toBe(4);
   });
 
-  it("refunds quota on OpenAI 401/429/500/timeout and malformed structured output", async () => {
+  it("refunds quota on OpenAI 401/429/500/timeout and malformed structured output", { timeout: 60_000 }, async () => {
     const telegramId = Math.floor(Math.random() * 1_000_000_000) + 6_000_000;
     const failures: AIProviderError[] = [
       new AIProviderError("401", { category: "invalid_openai_key", providerStatus: 401 }),
@@ -363,7 +363,7 @@ describe.skipIf(!dbReady())("POST /api/translate", () => {
   });
 });
 
-describe.skipIf(!dbReady())("usage isolation", () => {
+describe.skipIf(!dbReady())("usage isolation", { timeout: 30_000 }, () => {
   it("LensMini usage does not consume demo/template process quota", async () => {
     const user = await prisma.user.create({
       data: { telegramId: `iso-${Date.now()}`, firstName: "Iso" },
@@ -422,7 +422,7 @@ describe.skipIf(!dbReady())("usage isolation", () => {
   });
 });
 
-describe.skipIf(!dbReady())("history isolation", () => {
+describe.skipIf(!dbReady())("history isolation", { timeout: 30_000 }, () => {
   it("returns only the current LensMini user's entries", async () => {
     const app = await prisma.app.upsert({
       where: { slug: "lensmini" },

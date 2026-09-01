@@ -26,15 +26,117 @@ const MAX_OUTPUT_TOKENS = 1200;
 type ResponseContentPart = { type?: string; text?: string };
 type ResponseOutputItem = { type?: string; content?: ResponseContentPart[] };
 
+type OpenAIErrorFields = {
+  message?: string;
+  type?: string;
+  code?: string;
+  param?: string;
+};
+
 type OpenAIResponsesBody = {
   output_text?: string;
   output?: ResponseOutputItem[];
-  error?: { message?: string; type?: string; code?: string };
+  error?: OpenAIErrorFields;
 };
 
 type InputContent =
   | { type: "input_text"; text: string }
   | { type: "input_image"; image_url: string; detail: "low" | "auto" };
+
+/** OpenAI json_object mode requires the word JSON in the request context. */
+export const JSON_OBJECT_INPUT_INSTRUCTION = "Return only valid JSON matching the requested response structure.";
+
+function hasLiteralJson(text: string): boolean {
+  return /\bjson\b/i.test(text);
+}
+
+function inputTextBlob(content: InputContent[]): string {
+  return content.filter((part): part is { type: "input_text"; text: string } => part.type === "input_text").map((part) => part.text).join("\n");
+}
+
+function ensureJsonInstructionInInput(content: InputContent[]): InputContent[] {
+  if (hasLiteralJson(inputTextBlob(content))) {
+    return content;
+  }
+  return [{ type: "input_text", text: JSON_OBJECT_INPUT_INSTRUCTION }, ...content];
+}
+
+export function sanitizeOpenAIErrorMessage(message: string | undefined): string | undefined {
+  if (!message) {
+    return undefined;
+  }
+  let safe = message
+    .replace(/sk-[A-Za-z0-9_-]+/gi, "[REDACTED]")
+    .replace(/Bearer\s+\S+/gi, "Bearer [REDACTED]")
+    .replace(/data:[^;\s]+;base64,[A-Za-z0-9+/=\s]+/gi, "[REDACTED]")
+    .replace(/\b[A-Za-z0-9+/]{80,}={0,2}\b/g, "[REDACTED]")
+    .replace(/(?:postgres(?:ql)?|mysql|mongodb):\/\/\S+/gi, "[REDACTED]")
+    .replace(/\b(?:initData|tma)\b[^\n]{0,200}/gi, "[REDACTED]");
+  if (safe.length > 300) {
+    safe = `${safe.slice(0, 300)}…`;
+  }
+  return safe;
+}
+
+export function buildOpenAIResponsesRequest(input: {
+  model: string;
+  instructions?: string;
+  content: InputContent[];
+  json: boolean;
+}): Record<string, unknown> {
+  const content = input.json ? ensureJsonInstructionInInput(input.content) : input.content;
+  return {
+    model: input.model,
+    store: false,
+    max_output_tokens: MAX_OUTPUT_TOKENS,
+    ...(input.instructions ? { instructions: input.instructions } : {}),
+    ...(input.json
+      ? {
+          text: {
+            format: { type: "json_object" },
+          },
+        }
+      : {}),
+    input: [
+      {
+        role: "user",
+        content,
+      },
+    ],
+  };
+}
+
+function logAndThrowOpenAIFailure(
+  status: number,
+  error: OpenAIErrorFields | undefined,
+  model: string,
+  latencyMs: number,
+): never {
+  const type = error?.type;
+  const code = error?.code;
+  const param = error?.param;
+  const safeMessage = sanitizeOpenAIErrorMessage(error?.message);
+  const category = classifyOpenAIFailure(status, code, type);
+  console.info("[minifactory] openai_failed", {
+    provider: "openai",
+    status,
+    type: type ?? null,
+    code: code ?? null,
+    param: param ?? null,
+    safeMessage: safeMessage ?? null,
+    category,
+    model,
+    latencyMs,
+  });
+  throw new AIProviderError(`OpenAI request failed: ${status}`, {
+    category,
+    providerStatus: status,
+    providerType: type,
+    providerCode: code,
+    providerParam: param,
+    safeMessage,
+  });
+}
 
 async function openaiResponses(input: {
   model: string;
@@ -55,25 +157,7 @@ async function openaiResponses(input: {
         authorization: `Bearer ${key}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({
-        model: input.model,
-        store: false,
-        max_output_tokens: MAX_OUTPUT_TOKENS,
-        ...(input.instructions ? { instructions: input.instructions } : {}),
-        ...(input.json
-          ? {
-              text: {
-                format: { type: "json_object" },
-              },
-            }
-          : {}),
-        input: [
-          {
-            role: "user",
-            content: input.content,
-          },
-        ],
-      }),
+      body: JSON.stringify(buildOpenAIResponsesRequest(input)),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
@@ -86,44 +170,17 @@ async function openaiResponses(input: {
   }
   const latencyMs = Date.now() - started;
   if (!response.ok) {
-    let providerType: string | undefined;
-    let providerCode: string | undefined;
+    let errFields: OpenAIErrorFields | undefined;
     try {
-      const errBody = (await response.json()) as OpenAIResponsesBody;
-      providerType = errBody.error?.type;
-      providerCode = errBody.error?.code;
+      errFields = ((await response.json()) as OpenAIResponsesBody).error;
     } catch {
-      providerType = undefined;
+      errFields = undefined;
     }
-    const category = classifyOpenAIFailure(response.status, providerCode, providerType);
-    console.info("[minifactory] openai_failed", {
-      category,
-      providerStatus: response.status,
-      providerType: providerCode ?? providerType ?? null,
-      model: input.model,
-      latencyMs,
-    });
-    throw new AIProviderError(`OpenAI request failed: ${response.status}`, {
-      category,
-      providerStatus: response.status,
-      providerType: providerCode ?? providerType,
-    });
+    logAndThrowOpenAIFailure(response.status, errFields, input.model, latencyMs);
   }
   const json = (await response.json()) as OpenAIResponsesBody;
   if (json.error) {
-    const category = classifyOpenAIFailure(response.status, json.error.code, json.error.type);
-    console.info("[minifactory] openai_failed", {
-      category,
-      providerStatus: response.status,
-      providerType: json.error.code ?? json.error.type ?? null,
-      model: input.model,
-      latencyMs,
-    });
-    throw new AIProviderError("OpenAI request failed", {
-      category,
-      providerStatus: response.status,
-      providerType: json.error.code ?? json.error.type,
-    });
+    logAndThrowOpenAIFailure(response.status, json.error, input.model, latencyMs);
   }
   const text = extractOutputText(json);
   if (!text) {

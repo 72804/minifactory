@@ -43,15 +43,28 @@ export class AIProviderError extends Error {
   readonly category: string;
   readonly providerStatus?: number;
   readonly providerType?: string;
+  readonly providerCode?: string;
+  readonly providerParam?: string;
+  readonly safeMessage?: string;
 
   constructor(
     message: string,
-    options?: { category?: string; providerStatus?: number; providerType?: string },
+    options?: {
+      category?: string;
+      providerStatus?: number;
+      providerType?: string;
+      providerCode?: string;
+      providerParam?: string;
+      safeMessage?: string;
+    },
   ) {
     super(message);
     this.name = "AIProviderError";
     this.category = options?.category ?? "provider_error";
     this.providerStatus = options?.providerStatus;
     this.providerType = options?.providerType;
+    this.providerCode = options?.providerCode;
+    this.providerParam = options?.providerParam;
+    this.safeMessage = options?.safeMessage;
   }
 }
