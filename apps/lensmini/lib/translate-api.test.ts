@@ -226,6 +226,113 @@ describe.skipIf(!dbReady())("POST /api/translate", () => {
     expect(json.code).toBe("usage_limit");
   });
 
+  it("does not consume quota when the image is rejected before the provider", async () => {
+    const telegramId = Math.floor(Math.random() * 1_000_000_000) + 4_000_000;
+    const bad = await translate(
+      { targetLanguage: "en", imageBase64: GIF, mimeType: "image/gif" },
+      telegramId,
+    );
+    expect(bad.status).toBe(400);
+    for (let i = 0; i < 5; i += 1) {
+      const response = await translate(
+        { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
+        telegramId,
+      );
+      expect(response.status).toBe(200);
+    }
+    const sixth = await translate(
+      { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
+      telegramId,
+    );
+    expect(sixth.status).toBe(429);
+  });
+
+  it("consumes quota for a successful no-text provider result", async () => {
+    const telegramId = Math.floor(Math.random() * 1_000_000_000) + 5_000_000;
+    const noText = {
+      ...visionOk,
+      originalText: "",
+      translatedText: "",
+      blocks: [],
+      noText: true,
+    };
+    const response = await translate(
+      { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
+      telegramId,
+      provider({
+        analyzeImageStructured: async (_input, schema) => schema.parse(noText),
+      }),
+    );
+    expect(response.status).toBe(422);
+    const json = (await response.json()) as { code: string; usage: { remaining: number } };
+    expect(json.code).toBe("no_text");
+    expect(json.usage.remaining).toBe(4);
+  });
+
+  it("refunds quota on OpenAI 401/429/500/timeout and malformed structured output", async () => {
+    const telegramId = Math.floor(Math.random() * 1_000_000_000) + 6_000_000;
+    const failures: AIProviderError[] = [
+      new AIProviderError("401", { category: "invalid_openai_key", providerStatus: 401 }),
+      new AIProviderError("429", { category: "provider_429", providerStatus: 429 }),
+      new AIProviderError("500", { category: "provider_5xx", providerStatus: 500 }),
+      new AIProviderError("timeout", { category: "timeout" }),
+    ];
+    for (const failure of failures) {
+      const response = await translate(
+        { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
+        telegramId,
+        provider({
+          analyzeImageStructured: async () => {
+            throw failure;
+          },
+        }),
+      );
+      expect(response.status).toBe(502);
+    }
+    const schemaFail = await translate(
+      { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
+      telegramId,
+      provider({
+        analyzeImageStructured: async () => ({ nope: true }) as never,
+      }),
+    );
+    expect(schemaFail.status).toBe(502);
+    for (let i = 0; i < 5; i += 1) {
+      const response = await translate(
+        { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
+        telegramId,
+      );
+      expect(response.status).toBe(200);
+    }
+    const sixth = await translate(
+      { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
+      telegramId,
+    );
+    expect(sixth.status).toBe(429);
+  });
+
+  it("keeps the last concurrent credit safe", async () => {
+    const telegramId = Math.floor(Math.random() * 1_000_000_000) + 7_000_000;
+    for (let i = 0; i < 4; i += 1) {
+      const response = await translate(
+        { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
+        telegramId,
+      );
+      expect(response.status).toBe(200);
+    }
+    const racing = await Promise.all([
+      translate({ targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" }, telegramId),
+      translate({ targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" }, telegramId),
+    ]);
+    const statuses = racing.map((response) => response.status).sort();
+    expect(statuses).toEqual([200, 429]);
+    const leftover = await translate(
+      { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },
+      telegramId,
+    );
+    expect(leftover.status).toBe(429);
+  });
+
   it("returns a safe public error when the provider fails", async () => {
     const response = await translate(
       { targetLanguage: "en", imageBase64: JPEG_1X1, mimeType: "image/jpeg" },

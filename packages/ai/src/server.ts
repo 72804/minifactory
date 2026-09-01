@@ -29,7 +29,7 @@ type ResponseOutputItem = { type?: string; content?: ResponseContentPart[] };
 type OpenAIResponsesBody = {
   output_text?: string;
   output?: ResponseOutputItem[];
-  error?: { message?: string; type?: string };
+  error?: { message?: string; type?: string; code?: string };
 };
 
 type InputContent =
@@ -44,47 +44,117 @@ async function openaiResponses(input: {
 }): Promise<string> {
   const key = getServerEnv().OPENAI_API_KEY;
   if (!key) {
-    throw new AIProviderError("OPENAI_API_KEY is not configured");
+    throw new AIProviderError("OPENAI_API_KEY is not configured", { category: "missing_openai_key" });
   }
-  const response = await fetch(OPENAI_RESPONSES_URL, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${key}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: input.model,
-      store: false,
-      max_output_tokens: MAX_OUTPUT_TOKENS,
-      ...(input.instructions ? { instructions: input.instructions } : {}),
-      ...(input.json
-        ? {
-            text: {
-              format: { type: "json_object" },
-            },
-          }
-        : {}),
-      input: [
-        {
-          role: "user",
-          content: input.content,
-        },
-      ],
-    }),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+  const started = Date.now();
+  let response: Response;
+  try {
+    response = await fetch(OPENAI_RESPONSES_URL, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${key}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: input.model,
+        store: false,
+        max_output_tokens: MAX_OUTPUT_TOKENS,
+        ...(input.instructions ? { instructions: input.instructions } : {}),
+        ...(input.json
+          ? {
+              text: {
+                format: { type: "json_object" },
+              },
+            }
+          : {}),
+        input: [
+          {
+            role: "user",
+            content: input.content,
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    const timeout =
+      (error instanceof Error && error.name === "TimeoutError") ||
+      (error instanceof Error && error.name === "AbortError");
+    throw new AIProviderError(timeout ? "OpenAI request timed out" : "OpenAI request failed", {
+      category: timeout ? "timeout" : "provider_error",
+    });
+  }
+  const latencyMs = Date.now() - started;
   if (!response.ok) {
-    throw new AIProviderError(`OpenAI request failed: ${response.status}`);
+    let providerType: string | undefined;
+    let providerCode: string | undefined;
+    try {
+      const errBody = (await response.json()) as OpenAIResponsesBody;
+      providerType = errBody.error?.type;
+      providerCode = errBody.error?.code;
+    } catch {
+      providerType = undefined;
+    }
+    const category = classifyOpenAIFailure(response.status, providerCode, providerType);
+    console.info("[minifactory] openai_failed", {
+      category,
+      providerStatus: response.status,
+      providerType: providerCode ?? providerType ?? null,
+      model: input.model,
+      latencyMs,
+    });
+    throw new AIProviderError(`OpenAI request failed: ${response.status}`, {
+      category,
+      providerStatus: response.status,
+      providerType: providerCode ?? providerType,
+    });
   }
   const json = (await response.json()) as OpenAIResponsesBody;
   if (json.error) {
-    throw new AIProviderError("OpenAI request failed");
+    const category = classifyOpenAIFailure(response.status, json.error.code, json.error.type);
+    console.info("[minifactory] openai_failed", {
+      category,
+      providerStatus: response.status,
+      providerType: json.error.code ?? json.error.type ?? null,
+      model: input.model,
+      latencyMs,
+    });
+    throw new AIProviderError("OpenAI request failed", {
+      category,
+      providerStatus: response.status,
+      providerType: json.error.code ?? json.error.type,
+    });
   }
   const text = extractOutputText(json);
   if (!text) {
-    throw new AIProviderError("OpenAI returned an empty response");
+    throw new AIProviderError("OpenAI returned an empty response", {
+      category: "empty_output",
+      providerStatus: response.status,
+    });
   }
   return text;
+}
+
+function classifyOpenAIFailure(status: number, code?: string, type?: string): string {
+  if (status === 401 || code === "invalid_api_key") {
+    return "invalid_openai_key";
+  }
+  if (code === "model_not_found" || status === 404) {
+    return "model_not_found";
+  }
+  if (status === 429) {
+    return "provider_429";
+  }
+  if (status === 403) {
+    return "provider_403";
+  }
+  if (status === 400) {
+    return "provider_400";
+  }
+  if (status >= 500) {
+    return "provider_5xx";
+  }
+  return type || "provider_error";
 }
 
 function extractOutputText(json: OpenAIResponsesBody): string {
@@ -110,7 +180,26 @@ function parseJsonObject(text: string): unknown {
   const start = trimmed.indexOf("{");
   const end = trimmed.lastIndexOf("}");
   const slice = start >= 0 && end > start ? trimmed.slice(start, end + 1) : trimmed;
-  return JSON.parse(slice) as unknown;
+  try {
+    return JSON.parse(slice) as unknown;
+  } catch {
+    throw new AIProviderError("OpenAI structured output was not valid JSON", {
+      category: "malformed_structured_output",
+    });
+  }
+}
+
+function parseStructured<T>(text: string, schema: z.ZodType<T>): T {
+  try {
+    return schema.parse(parseJsonObject(text));
+  } catch (error) {
+    if (error instanceof AIProviderError) {
+      throw error;
+    }
+    throw new AIProviderError("OpenAI structured output did not match the expected schema", {
+      category: "malformed_structured_output",
+    });
+  }
 }
 
 const mockVisionPayload = {
@@ -170,7 +259,7 @@ const openaiProvider: AIProvider = {
       json: true,
       content: [{ type: "input_text", text: input.prompt }],
     });
-    return schema.parse(parseJsonObject(content));
+    return parseStructured(content, schema);
   },
   async analyzeImage(input) {
     return openaiResponses({
@@ -201,7 +290,7 @@ const openaiProvider: AIProvider = {
         },
       ],
     });
-    return schema.parse(parseJsonObject(content));
+    return parseStructured(content, schema);
   },
   async transcribeAudio(_input: TranscribeAudioInput) {
     throw new AIProviderError("Audio transcription is not enabled");

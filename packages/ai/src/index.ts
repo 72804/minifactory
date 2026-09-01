@@ -40,8 +40,18 @@ export type AIProvider = {
 };
 
 export class AIProviderError extends Error {
-  constructor(message: string) {
+  readonly category: string;
+  readonly providerStatus?: number;
+  readonly providerType?: string;
+
+  constructor(
+    message: string,
+    options?: { category?: string; providerStatus?: number; providerType?: string },
+  ) {
     super(message);
     this.name = "AIProviderError";
+    this.category = options?.category ?? "provider_error";
+    this.providerStatus = options?.providerStatus;
+    this.providerType = options?.providerType;
   }
 }

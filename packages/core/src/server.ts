@@ -2,6 +2,7 @@ export { createSession, requireIdentity } from "./session";
 export type { MiniSession } from "./session";
 export {
   consumeUsage,
+  refundUsage,
   getUsage,
   primaryUsageFeature,
   UsageLimitError,

@@ -1,9 +1,10 @@
 import { analyzeImageStructured, createAIProvider, generateStructured, AIProviderError, type AIProvider } from "@minifactory/ai/server";
 import { track } from "@minifactory/analytics/server";
-import { requireIdentity, consumeUsage, UsageLimitError } from "@minifactory/core/server";
+import { requireIdentity, consumeUsage, refundUsage, UsageLimitError } from "@minifactory/core/server";
 import { MediaValidationError, OCR_IMAGE_LIMITS, decodeBase64Image, validateOcrImageBuffer } from "@minifactory/media/server";
 import { TelegramAuthError } from "@minifactory/telegram/server";
 import { ZodError } from "zod";
+import { AI_MODELS } from "@minifactory/ai";
 import { appConfig, TRANSLATE_FEATURE, TRANSLATE_FREE_PER_DAY } from "../app.config";
 import { isSupportedLanguage, languageName } from "./languages";
 import { RETRANSLATE_SYSTEM_PROMPT, VISION_SYSTEM_PROMPT, retranslateUserPrompt, visionUserPrompt } from "./prompt";
@@ -156,31 +157,41 @@ export async function handleTranslateRequest(
     });
 
     const aiStarted = Date.now();
-    let vision = visionProviderSchema.parse(
-      body.imageBase64 && mimeType
-        ? await analyzeImageStructured(
-            {
-              imageBase64: body.imageBase64,
-              mimeType,
-              system: VISION_SYSTEM_PROMPT,
-              prompt: visionUserPrompt(body.targetLanguage, body.sourceLanguage),
-            },
-            visionProviderSchema,
-            provider,
-          )
-        : await generateStructured(
-            {
-              system: RETRANSLATE_SYSTEM_PROMPT,
-              prompt: retranslateUserPrompt({
-                originalText: body.originalText ?? "",
-                sourceLanguage: body.sourceLanguage,
-                targetLanguage: body.targetLanguage,
-              }),
-            },
-            visionProviderSchema,
-            provider,
-          ),
-    );
+    let vision: ReturnType<typeof visionProviderSchema.parse>;
+    try {
+      vision = visionProviderSchema.parse(
+        body.imageBase64 && mimeType
+          ? await analyzeImageStructured(
+              {
+                imageBase64: body.imageBase64,
+                mimeType,
+                system: VISION_SYSTEM_PROMPT,
+                prompt: visionUserPrompt(body.targetLanguage, body.sourceLanguage),
+              },
+              visionProviderSchema,
+              provider,
+            )
+          : await generateStructured(
+              {
+                system: RETRANSLATE_SYSTEM_PROMPT,
+                prompt: retranslateUserPrompt({
+                  originalText: body.originalText ?? "",
+                  sourceLanguage: body.sourceLanguage,
+                  targetLanguage: body.targetLanguage,
+                }),
+              },
+              visionProviderSchema,
+              provider,
+            ),
+      );
+    } catch (error) {
+      await refundUsage({
+        appId: session.app.id,
+        userId: session.user.id,
+        feature: TRANSLATE_FEATURE,
+      });
+      throw error;
+    }
     const providerMs = Date.now() - aiStarted;
 
     vision = {
@@ -215,16 +226,26 @@ export async function handleTranslateRequest(
       return json({ error: publicErrorMessage("no_text"), code: "no_text", usage }, 422);
     }
 
-    const result = normalizeBlocks(translationResultSchema.parse(vision));
-    await persistTranslation({
-      appId: session.app.id,
-      userId: session.user.id,
-      sourceLanguage: result.sourceLanguage.code,
-      targetLanguage: result.targetLanguage.code,
-      originalText: result.originalText,
-      translatedText: result.translatedText,
-      keep: HISTORY_MAX,
-    });
+    let result: TranslationResult;
+    try {
+      result = normalizeBlocks(translationResultSchema.parse(vision));
+      await persistTranslation({
+        appId: session.app.id,
+        userId: session.user.id,
+        sourceLanguage: result.sourceLanguage.code,
+        targetLanguage: result.targetLanguage.code,
+        originalText: result.originalText,
+        translatedText: result.translatedText,
+        keep: HISTORY_MAX,
+      });
+    } catch (error) {
+      await refundUsage({
+        appId: session.app.id,
+        userId: session.user.id,
+        feature: TRANSLATE_FEATURE,
+      });
+      throw error;
+    }
 
     if (appConfig.analytics.enabled) {
       await track({
@@ -295,7 +316,13 @@ export async function handleTranslateRequest(
     if (error instanceof AIProviderError || error instanceof ZodError) {
       console.error(
         "[lensmini] translation failed",
-        error instanceof ZodError ? "invalid_provider_json" : "provider",
+        error instanceof ZodError ? "invalid_provider_json" : error.category,
+        {
+          providerStatus: error instanceof AIProviderError ? (error.providerStatus ?? null) : null,
+          providerType: error instanceof AIProviderError ? (error.providerType ?? null) : null,
+          model: AI_MODELS.vision,
+          provider: provider.id,
+        },
       );
       return json({ error: publicErrorMessage("failed"), code: "failed" }, 502);
     }

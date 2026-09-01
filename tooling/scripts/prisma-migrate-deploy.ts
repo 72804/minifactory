@@ -16,22 +16,28 @@ export function neonUnpooledDatabaseUrl(url: string): { url: string; usedUnpoole
   return { url, usedUnpooledHost: false };
 }
 
-const source = requireWritableDatabaseUrl();
-const preferred = process.env.DIRECT_URL?.trim();
-const { url, usedUnpooledHost } = preferred
-  ? { url: preferred, usedUnpooledHost: false }
-  : neonUnpooledDatabaseUrl(source);
-console.log(
-  `prisma migrate deploy → ${describeDatabaseUrl(url)}${usedUnpooledHost ? " (Neon unpooled host for migrations)" : preferred ? " (DIRECT_URL)" : ""}`,
-);
+function runMigrateDeploy(): never {
+  const source = requireWritableDatabaseUrl();
+  const preferred = process.env.DIRECT_URL?.trim();
+  const { url, usedUnpooledHost } = preferred
+    ? { url: preferred, usedUnpooledHost: false }
+    : neonUnpooledDatabaseUrl(source);
+  console.log(
+    `prisma migrate deploy → ${describeDatabaseUrl(url)}${usedUnpooledHost ? " (Neon unpooled host for migrations)" : preferred ? " (DIRECT_URL)" : ""}`,
+  );
 
-const result = spawnSync(
-  "pnpm",
-  ["exec", "prisma", "migrate", "deploy", "--schema", "prisma/schema.prisma"],
-  {
-    stdio: "inherit",
-    env: { ...process.env, DATABASE_URL: url },
-  },
-);
+  const result = spawnSync(
+    "pnpm",
+    ["exec", "prisma", "migrate", "deploy", "--schema", "prisma/schema.prisma"],
+    {
+      stdio: "inherit",
+      env: { ...process.env, DATABASE_URL: url },
+    },
+  );
 
-process.exit(result.status ?? 1);
+  process.exit(result.status ?? 1);
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  runMigrateDeploy();
+}

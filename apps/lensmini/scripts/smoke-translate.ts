@@ -88,8 +88,15 @@ function makeTextJpeg(): string | null {
 
 async function main() {
   loadEnv();
-  if (!process.env.OPENAI_API_KEY) {
-    console.log("SKIPPED: OPENAI_API_KEY is not configured. Real provider smoke test was not run.");
+  const key = process.env.OPENAI_API_KEY ?? "";
+  if (!key) {
+    console.log("FAIL: missing_openai_key");
+    process.exitCode = 1;
+    return;
+  }
+  if (!key.startsWith("sk-") || key.length < 20) {
+    console.log("FAIL: invalid_openai_key");
+    process.exitCode = 1;
     return;
   }
   const jpg = makeTextJpeg();
@@ -128,6 +135,10 @@ async function main() {
 }
 
 void main().catch((error) => {
-  console.error("Smoke test failed:", error instanceof Error ? error.message : "unknown error");
+  const category =
+    error && typeof error === "object" && "category" in error && typeof error.category === "string"
+      ? error.category
+      : "other";
+  console.error(`FAIL: ${category}`);
   process.exit(1);
 });

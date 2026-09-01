@@ -215,3 +215,72 @@ export async function consumeUsage(input: {
 
   throw new Error("Could not consume usage");
 }
+
+export async function refundUsage(input: {
+  appId: string;
+  userId: string;
+  feature: string;
+  amount?: number;
+  now?: Date;
+}): Promise<UsageDecision> {
+  const amount = input.amount ?? 1;
+  const periodKey = utcDayKey(input.now);
+  const maxAttempts = 8;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      return await prisma.$transaction(
+        async (tx) => {
+          const rows = await tx.$queryRaw<Array<{ id: string; count: number }>>(Prisma.sql`
+            SELECT id, count
+            FROM "UsageCounter"
+            WHERE "appId" = ${input.appId}
+              AND "userId" = ${input.userId}
+              AND feature = ${input.feature}
+              AND "periodKey" = ${periodKey}
+            FOR UPDATE
+          `);
+          const existing = rows[0];
+          const used = existing?.count ?? 0;
+          const next = Math.max(0, used - amount);
+          if (existing) {
+            await tx.usageCounter.update({
+              where: { id: existing.id },
+              data: { count: next },
+            });
+          }
+          await tx.usageEvent.create({
+            data: {
+              appId: input.appId,
+              userId: input.userId,
+              feature: input.feature,
+              amount: -amount,
+            },
+          });
+          return {
+            allowed: true,
+            remaining: next === 0 && !existing ? Number.POSITIVE_INFINITY : next,
+            limit: null,
+            reason: "ok" as const,
+            periodKey,
+          };
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          timeout: 10_000,
+        },
+      );
+    } catch (error) {
+      const retryable =
+        (error instanceof Prisma.PrismaClientKnownRequestError &&
+          (error.code === "P2034" || error.code === "P2002")) ||
+        (error instanceof Error && /could not serialize access/i.test(error.message));
+      if (retryable && attempt < maxAttempts - 1) {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new Error("Could not refund usage");
+}
