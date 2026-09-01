@@ -175,7 +175,7 @@ export function AppShell({ config, children }: ShellProps) {
 
   if (state.status === "loading") {
     return (
-      <div className="mf-shell">
+      <div className="mf-shell" data-app={config.id}>
         <div className="mf-center">
           <Spinner />
         </div>
@@ -186,8 +186,11 @@ export function AppShell({ config, children }: ShellProps) {
   if (state.status === "telegram-required") {
     const bot = config.botUsername.replace(/^@/, "");
     return (
-      <div className="mf-shell">
-        <div className="mf-center" style={{ gap: 12, padding: 24, textAlign: "center" }}>
+      <div className="mf-shell" data-app={config.id}>
+        <div className="mf-center lm-cta" style={{ gap: 12, padding: 24, textAlign: "center" }}>
+          {config.logo ? (
+            <img src={config.logo} alt="" width={64} height={64} className="lm-logo-lg" />
+          ) : null}
           <strong>{config.name} works inside Telegram</strong>
           <p style={{ color: "var(--mf-muted)", margin: 0 }}>
             {config.slug === "lensmini"
@@ -208,7 +211,7 @@ export function AppShell({ config, children }: ShellProps) {
 
   if (state.status === "error") {
     return (
-      <div className="mf-shell">
+      <div className="mf-shell" data-app={config.id}>
         <ErrorState title="Unable to load" body={state.message} />
       </div>
     );
@@ -231,6 +234,7 @@ export function AppShell({ config, children }: ShellProps) {
     <MiniErrorBoundary>
       <MiniSessionContext.Provider value={{ session, setUsage: setUsageOverride }}>
       <div className={shellClass} data-app={config.id}>
+        {config.shell.showHeader !== false ? (
         <PageHeader
           title={config.name}
           description={headerDescription}
@@ -260,6 +264,7 @@ export function AppShell({ config, children }: ShellProps) {
             </div>
           }
         />
+        ) : null}
         {showMockNotice ? (
           <p style={{ color: "var(--mf-muted)", marginTop: 0 }}>
             Telegram mock session is active for local development.

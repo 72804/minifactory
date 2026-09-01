@@ -86,6 +86,25 @@ function gitIgnored(root: string, rel: string): boolean {
   return result.status === 0;
 }
 
+export const LENSMINI_LISTING_ASSETS = [
+  "icon.png",
+  "screenshot-1.png",
+  "screenshot-2.png",
+  "screenshot-3.png",
+] as const;
+
+export function listingAssetsPresent(appDir: string, files: readonly string[] = LENSMINI_LISTING_ASSETS): boolean {
+  const listingDir = join(appDir, "public", "listing");
+  return files.every((name) => {
+    const filePath = join(listingDir, name);
+    if (!existsSync(filePath)) {
+      return false;
+    }
+    const header = readFileSync(filePath).subarray(0, 8);
+    return header.equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  });
+}
+
 export async function runAppDoctor(slug: string, root = process.cwd()): Promise<DoctorCheck[]> {
   const checks: DoctorCheck[] = [];
   const appDir = join(root, "apps", slug);
@@ -210,6 +229,16 @@ export async function runAppDoctor(slug: string, root = process.cwd()): Promise<
   }
   walk(appSource);
   checks.push(check(!leaked, "no obvious NEXT_PUBLIC secret leakage"));
+
+  if (slug === "lensmini") {
+    checks.push(
+      check(
+        listingAssetsPresent(appDir),
+        "listing assets present",
+        LENSMINI_LISTING_ASSETS.join(", "),
+      ),
+    );
+  }
 
   return checks;
 }

@@ -53,6 +53,8 @@ type HistoryItem = {
   createdAt: string;
 };
 
+const FAIL_COPY = "Couldn't translate this. Try again.";
+
 export function LensApp() {
   const router = useRouter();
   const { session, setUsage } = useMiniSession();
@@ -274,7 +276,7 @@ export function LensApp() {
       }
       if (!response.ok) {
         hapticNotification("error");
-        setToast(payload.error ?? "Translation failed. Try again.");
+        setToast(payload.error ?? FAIL_COPY);
         return;
       }
       hapticNotification("success");
@@ -283,7 +285,7 @@ export function LensApp() {
       setScreen("result");
     } catch {
       hapticNotification("error");
-      setToast("Translation failed. Try again.");
+      setToast(FAIL_COPY);
     } finally {
       submittingRef.current = false;
       setBusy(false);
@@ -302,7 +304,7 @@ export function LensApp() {
       void track("capture_completed", { inputMethod: "camera" });
       await submitImage(frame, "camera");
     } catch {
-      setToast("Translation failed. Try again.");
+      setToast(FAIL_COPY);
     }
   }
 
@@ -348,12 +350,12 @@ export function LensApp() {
         return;
       }
       if (!response.ok) {
-        setToast(payload.error ?? "Translation failed. Try again.");
+        setToast(payload.error ?? FAIL_COPY);
         return;
       }
       setResult(payload);
     } catch {
-      setToast("Translation failed. Try again.");
+      setToast(FAIL_COPY);
     } finally {
       submittingRef.current = false;
       setBusy(false);
@@ -412,25 +414,57 @@ export function LensApp() {
     }
   }
 
-  const cameraMessage =
-    cameraError === "denied"
-      ? "No camera access. Allow camera permission or choose a photo instead."
-      : cameraError === "unavailable"
-        ? "You can still upload a photo."
-        : null;
+  const usage = session.usage;
+  const quotaLabel =
+    usage.limit === null
+      ? "Unlimited"
+      : `${Number.isFinite(usage.remaining) ? usage.remaining : usage.limit} / ${usage.limit} free`;
+
+  const cameraDenied = cameraError === "denied";
+  const cameraUnavailable = cameraError === "unavailable";
+
+  const brandHeader = (
+      <header className="lm-brand">
+        <div className="lm-brand-mark">
+          <img src="/listing/icon.png" alt="" className="lm-logo" width={36} height={36} />
+          <div>
+            <h1>LensMini</h1>
+            <p className="lm-tagline">Point. Translate. Done.</p>
+          </div>
+        </div>
+        <span className="lm-quota" aria-label={`${quotaLabel} translations`}>
+          {quotaLabel}
+        </span>
+      </header>
+  );
 
   return (
     <div className="lm-app">
       {screen === "camera" ? (
         <>
+          {brandHeader}
           <div className="lm-toolbar">
             <LanguageButton code={targetLanguage} onClick={() => setPickerOpen(true)} />
-            <button type="button" className="lm-text-btn" onClick={() => void openHistory()}>
-              History
-            </button>
-            <button type="button" className="lm-text-btn" onClick={() => setMenuOpen(true)}>
-              More
-            </button>
+            <div className="lm-toolbar-end">
+              <button
+                type="button"
+                className="lm-icon-btn"
+                onClick={() => void openHistory()}
+                aria-label="History"
+                title="History"
+              >
+                ⏱
+              </button>
+              <button
+                type="button"
+                className="lm-icon-btn"
+                onClick={() => setMenuOpen(true)}
+                aria-label="More"
+                title="More"
+              >
+                •••
+              </button>
+            </div>
           </div>
           <div className="lm-viewport">
             {isCameraSupported() ? (
@@ -438,38 +472,51 @@ export function LensApp() {
             ) : (
               <div className="lm-fallback">Upload a photo to translate</div>
             )}
+            <div className="lm-vignette" aria-hidden="true" />
+            <div className="lm-corners" aria-hidden="true">
+              <span className="tl" />
+              <span className="tr" />
+              <span className="bl" />
+              <span className="br" />
+            </div>
             {!cameraReady && !cameraError && isCameraSupported() ? (
-              <div className="lm-overlay-msg">Starting camera…</div>
+              <div className="lm-overlay-msg">Opening camera…</div>
             ) : null}
-            {cameraMessage ? <div className="lm-overlay-msg">{cameraMessage}</div> : null}
+            {cameraDenied ? (
+              <div className="lm-overlay-msg">
+                <strong>Camera access is off.</strong>
+                <p>Allow camera access or upload a photo.</p>
+              </div>
+            ) : null}
+            {cameraUnavailable ? (
+              <div className="lm-overlay-msg">
+                <strong>Camera isn’t available.</strong>
+                <p>Upload a photo instead.</p>
+              </div>
+            ) : null}
+            {cameraReady && !busy ? <p className="lm-hint">Point at text</p> : null}
           </div>
-          <p className="lm-target-label">
-            Target: <LanguageButton code={targetLanguage} onClick={() => setPickerOpen(true)} />
-          </p>
-          <button
-            type="button"
-            className="lm-shutter"
-            onClick={() => void onCapture()}
-            disabled={busy || !cameraReady}
-            aria-label="Capture"
-          />
-          <div className="lm-secondary">
-            <Button variant="secondary" onClick={() => void onUpload()} disabled={busy}>
-              Upload Photo
-            </Button>
-            <Button variant="ghost" onClick={() => setPickerOpen(true)} disabled={busy}>
-              Swap Language
-            </Button>
+          <div className="lm-capture-row">
+            <button
+              type="button"
+              className="lm-shutter"
+              onClick={() => void onCapture()}
+              disabled={busy || !cameraReady}
+              aria-label="Capture"
+            />
+            <button type="button" className="lm-upload-link" onClick={() => void onUpload()} disabled={busy}>
+              Upload photo
+            </button>
           </div>
           <p className="lm-privacy">
-            Photos are processed for translation and are not saved by LensMini. The AI provider may process the image
-            to complete the request.
+            Photos are processed for translation and are not saved by LensMini.
           </p>
         </>
       ) : null}
 
       {screen === "result" && result ? (
         <div className="lm-result">
+          {brandHeader}
           {previewUrl && imagePreviewOpen ? (
             <button type="button" className="lm-preview-wrap" onClick={() => setImagePreviewOpen(false)}>
               <img src={previewUrl} alt="Captured frame" className="lm-preview" />
@@ -479,16 +526,29 @@ export function LensApp() {
               Show photo
             </button>
           ) : null}
-          <p className="lm-kicker">Detected: {result.sourceLanguage.name}</p>
-          <p className="lm-kicker">TRANSLATION</p>
-          <p className="lm-translated">{result.translatedText}</p>
-          <p className="lm-kicker">ORIGINAL</p>
-          <p className="lm-original">{result.originalText}</p>
+          <article className="lm-result-card">
+            <p className="lm-pair">
+              {result.sourceLanguage.name.toUpperCase()} <span>→</span>{" "}
+              <span className="lm-to">{result.targetLanguage.name.toUpperCase()}</span>
+            </p>
+            <p className="lm-muted">{result.sourceLanguage.name} detected</p>
+            <p className="lm-translated">{result.translatedText}</p>
+            <hr className="lm-divider" />
+            <p className="lm-kicker">Original</p>
+            <p className="lm-original">{result.originalText}</p>
+          </article>
           <div className="lm-actions">
-            <Button onClick={() => void copyText(result.translatedText)}>Copy</Button>
-            {speechOk ? <Button variant="secondary" onClick={onSpeak}>Speak</Button> : null}
-            <Button
-              variant="ghost"
+            <button type="button" className="lm-btn lm-btn-copy" onClick={() => void copyText(result.translatedText)}>
+              Copy
+            </button>
+            {speechOk ? (
+              <button type="button" className="lm-btn lm-btn-speak" onClick={onSpeak}>
+                Speak
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="lm-btn lm-btn-retake"
               onClick={() => {
                 void track("retake_clicked");
                 stopSpeaking();
@@ -497,7 +557,7 @@ export function LensApp() {
               }}
             >
               Retake
-            </Button>
+            </button>
           </div>
           <p className="lm-target-label">
             Translate to <LanguageButton code={targetLanguage} onClick={() => setPickerOpen(true)} />
@@ -509,7 +569,7 @@ export function LensApp() {
         <div className="lm-history">
           <div className="lm-toolbar">
             <button type="button" className="lm-text-btn" onClick={() => setScreen("camera")}>
-              Camera
+              ← History
             </button>
             {history.length > 0 ? (
               <button
@@ -527,14 +587,16 @@ export function LensApp() {
           {history.length === 0 ? <p className="lm-muted">No translations yet.</p> : null}
           {history.map((item) => (
             <article key={item.id} className="lm-history-item">
-              <p className="lm-kicker">
-                {languageName(item.sourceLanguage)} → {languageName(item.targetLanguage)}
+              <p className="lm-pair">
+                {languageName(item.sourceLanguage).toUpperCase()} <span>→</span>{" "}
+                <span className="lm-to">{languageName(item.targetLanguage).toUpperCase()}</span>
               </p>
               <p className="lm-translated">{item.translatedText}</p>
               <p className="lm-original">{item.originalText}</p>
               <div className="lm-actions">
-                <Button
-                  variant="secondary"
+                <button
+                  type="button"
+                  className="lm-btn lm-btn-open"
                   onClick={() => {
                     setResult({
                       sourceLanguage: { code: item.sourceLanguage, name: languageName(item.sourceLanguage) },
@@ -555,19 +617,20 @@ export function LensApp() {
                   }}
                 >
                   Open
-                </Button>
-                <Button variant="ghost" onClick={() => void copyText(item.translatedText)}>
+                </button>
+                <button type="button" className="lm-btn lm-btn-copy" onClick={() => void copyText(item.translatedText)}>
                   Copy
-                </Button>
-                <Button
-                  variant="ghost"
+                </button>
+                <button
+                  type="button"
+                  className="lm-btn lm-btn-ghost"
                   onClick={async () => {
                     await factoryFetch(`/api/history?id=${encodeURIComponent(item.id)}`, { method: "DELETE" });
                     setHistory((rows) => rows.filter((row) => row.id !== item.id));
                   }}
                 >
                   Delete
-                </Button>
+                </button>
               </div>
             </article>
           ))}
@@ -576,7 +639,7 @@ export function LensApp() {
 
       {busy ? (
         <div className="lm-busy" role="status">
-          {phase === "analyzing" ? "Analyzing text…" : "Translating…"}
+          {phase === "analyzing" ? "Reading text…" : "Translating…"}
         </div>
       ) : null}
 
@@ -588,22 +651,32 @@ export function LensApp() {
         onSelect={onSelectLanguage}
       />
       <BottomSheet open={menuOpen} title="More" onClose={() => setMenuOpen(false)}>
-        <Button
-          onClick={() => {
-            void track("share_clicked");
-            openTelegramLink(shareUrl);
-            setMenuOpen(false);
-          }}
-        >
-          Share LensMini
-        </Button>
-        <div style={{ height: 8 }} />
-        <Button variant="secondary" onClick={() => router.push("/privacy")}>
-          Privacy
-        </Button>
+        <div className="lm-menu-stack">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setMenuOpen(false);
+              void onUpload();
+            }}
+          >
+            Upload Photo
+          </Button>
+          <Button
+            onClick={() => {
+              void track("share_clicked");
+              openTelegramLink(shareUrl);
+              setMenuOpen(false);
+            }}
+          >
+            Share LensMini
+          </Button>
+          <Button variant="ghost" onClick={() => router.push("/privacy")}>
+            Privacy
+          </Button>
+        </div>
       </BottomSheet>
       <BottomSheet open={limitOpen} title="Daily limit reached" onClose={() => setLimitOpen(false)}>
-        <p>You&apos;ve used today&apos;s 5 free translations.</p>
+        <p>You&apos;ve used your 5 free translations today.</p>
         <p className="lm-muted">More translations are coming soon.</p>
         <Button onClick={() => setLimitOpen(false)}>OK</Button>
       </BottomSheet>

@@ -19,7 +19,7 @@ export default function PrivacyPage() {
       </p>
       <p>
         Analytics events may record actions such as camera permission, capture, and translation success or failure.
-        Those events do not include the photograph, OCR text, or translated text.
+        Those events do not include the photograph, detected text, or translated text.
       </p>
     </main>
   );

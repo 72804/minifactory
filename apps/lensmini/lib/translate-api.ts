@@ -73,14 +73,14 @@ export async function handleTranslateRequest(
   try {
     session = await requireIdentity(request, appConfig, TRANSLATE_FEATURE);
   } catch (error) {
-    return mapAuthError(error) ?? json({ error: "Translation failed. Try again.", code: "failed" }, 500);
+    return mapAuthError(error) ?? json({ error: publicErrorMessage("failed"), code: "failed" }, 500);
   }
 
   let parsedJson: unknown;
   try {
     parsedJson = await request.json();
   } catch {
-    return json({ error: "Translation failed. Try again.", code: "invalid" }, 400);
+    return json({ error: publicErrorMessage("failed"), code: "invalid" }, 400);
   }
 
   const parsed = translateRequestSchema.safeParse(parsedJson);
@@ -97,7 +97,7 @@ export async function handleTranslateRequest(
       }
       return json({ error: publicErrorMessage("unsupported_language"), code: "unsupported_language" }, 400);
     }
-    return json({ error: "Translation failed. Try again.", code: "invalid" }, 400);
+    return json({ error: publicErrorMessage("failed"), code: "invalid" }, 400);
   }
 
   const body = parsed.data;

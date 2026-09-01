@@ -1,6 +1,6 @@
 # FindMini listing — LensMini
 
-Do not submit until `apps/lensmini/public/listing/` contains real-device screenshots. Do not fabricate screenshots.
+Do not submit until `apps/lensmini/public/listing/` contains the required assets. Do not fabricate screenshots.
 
 ## Name
 
@@ -8,25 +8,25 @@ LensMini
 
 ## Tagline
 
-Point. Translate. Understand.
+Point. Translate. Done.
 
 ## Short description
 
-Instant camera translation inside Telegram.
+Translate text instantly with your camera.
 
 ## Long description
 
-Point your camera at menus, signs, labels, documents, and other foreign text. LensMini detects the language and translates it instantly without leaving Telegram.
+Point your camera at any text and get an instant translation. LensMini works with signs, menus, labels, documents, and photos — right inside Telegram.
 
 ## Keywords
 
 translator  
 camera  
-OCR  
+translate  
 travel  
 language  
 photo  
-translation  
+text  
 AI
 
 ## Assets

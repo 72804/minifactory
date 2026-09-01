@@ -345,7 +345,7 @@ describe.skipIf(!dbReady())("POST /api/translate", { timeout: 30_000 }, () => {
     );
     expect(response.status).toBe(502);
     const json = (await response.json()) as { error: string };
-    expect(json.error).toBe("Translation failed. Try again.");
+    expect(json.error).toBe("Couldn't translate this. Try again.");
     expect(JSON.stringify(json)).not.toMatch(/secret stack/);
   });
 
@@ -359,7 +359,7 @@ describe.skipIf(!dbReady())("POST /api/translate", { timeout: 30_000 }, () => {
     );
     expect(response.status).toBe(502);
     const json = (await response.json()) as { error: string };
-    expect(json.error).toBe("Translation failed. Try again.");
+    expect(json.error).toBe("Couldn't translate this. Try again.");
   });
 });
 

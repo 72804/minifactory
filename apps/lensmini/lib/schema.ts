@@ -85,20 +85,20 @@ export function languageRef(code: string) {
 export function publicErrorMessage(code: string): string {
   switch (code) {
     case "no_text":
-      return "I couldn't find readable text in this image.";
+      return "No readable text found. Try moving closer or using a clearer photo.";
     case "unreadable":
-      return "Try moving closer or holding the camera steady.";
+      return "Try moving closer or using a clearer photo.";
     case "unsupported_type":
       return "This image format isn't supported.";
     case "too_large":
       return "That image is too large. Try another photo.";
     case "usage_limit":
-      return "You've used today's 5 free translations.";
+      return "You've used your 5 free translations today.";
     case "unsupported_language":
       return "That language isn't supported yet.";
     case "missing_target":
       return "Choose a target language.";
     default:
-      return "Translation failed. Try again.";
+      return "Couldn't translate this. Try again.";
   }
 }

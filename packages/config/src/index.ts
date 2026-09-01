@@ -69,6 +69,7 @@ export const shellSchema = z.object({
   showShare: z.boolean().default(true),
   showPaywall: z.boolean().default(true),
   immersive: z.boolean().default(false),
+  showHeader: z.boolean().default(true),
 });
 
 export const slugSchema = z

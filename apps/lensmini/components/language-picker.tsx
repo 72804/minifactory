@@ -28,6 +28,7 @@ export function LanguagePicker({
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Search language"
         autoFocus
+        autoComplete="off"
         aria-label="Search language"
       />
       {lists.recent.length > 0 ? (
@@ -50,6 +51,7 @@ export function LanguagePicker({
         </div>
       ) : null}
       <div className="lm-lang-list">
+        <p className="lm-kicker">All languages</p>
         {lists.all.map((language) => (
           <button
             key={language.code}
@@ -81,8 +83,8 @@ export function LanguageButton({
   onClick: () => void;
 }) {
   return (
-    <button type="button" className="lm-lang-btn" onClick={onClick}>
-      {languageName(code)} ▼
+    <button type="button" className="lm-lang-btn" onClick={onClick} aria-haspopup="dialog">
+      🌐 {languageName(code)} ▼
     </button>
   );
 }

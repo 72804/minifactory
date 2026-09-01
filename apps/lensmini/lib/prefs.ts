@@ -43,8 +43,19 @@ export function languagesForPicker(query: string, recentCodes: string[]): {
   recent: SupportedLanguage[];
   all: SupportedLanguage[];
 } {
-  const recent = recentCodes
-    .map((code) => getLanguage(code))
-    .filter((language): language is SupportedLanguage => Boolean(language));
-  return { recent: query ? [] : recent, all: filterLanguages(query) };
+  const seen = new Set<string>();
+  const recent: SupportedLanguage[] = [];
+  for (const code of recentCodes) {
+    const language = getLanguage(code);
+    if (!language || seen.has(language.code)) {
+      continue;
+    }
+    seen.add(language.code);
+    recent.push(language);
+  }
+  const filtered = filterLanguages(query);
+  return {
+    recent: query.trim() ? [] : recent,
+    all: query.trim() ? filtered : filtered.filter((language) => !seen.has(language.code)),
+  };
 }

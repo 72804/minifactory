@@ -1,11 +1,120 @@
 @import "tailwindcss";
 @import "@minifactory/ui/styles.css";
 
+:root {
+  --lens-bg: #07060f;
+  --lens-surface: #141222;
+  --lens-surface-raised: #1c1830;
+  --lens-border: rgb(167 139 250 / 0.22);
+  --lens-text: #f8f7ff;
+  --lens-text-muted: #9b96b3;
+  --lens-purple: #7c5cff;
+  --lens-indigo: #4f6dff;
+  --lens-cyan: #5eead4;
+  --lens-green: #86efac;
+  --lens-gradient-primary: linear-gradient(135deg, #7c5cff 0%, #4f6dff 100%);
+  --lens-glow-purple: 0 0 28px rgb(124 92 255 / 0.28);
+  --lens-glow-cyan: 0 0 22px rgb(94 234 212 / 0.2);
+}
+
+html:has([data-app="lensmini"]),
+html:has([data-app="lensmini"]) body {
+  background: var(--lens-bg);
+  color: var(--lens-text);
+}
+
+.mf-shell[data-app="lensmini"] {
+  --mf-bg: var(--lens-bg);
+  --mf-fg: var(--lens-text);
+  --mf-muted: var(--lens-text-muted);
+  --mf-surface: var(--lens-surface);
+  --mf-accent: var(--lens-purple);
+  --mf-button-fg: #ffffff;
+  position: relative;
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgb(92 64 200 / 0.28), transparent 55%),
+    radial-gradient(90% 50% at 100% 0%, rgb(56 80 180 / 0.16), transparent 46%),
+    var(--lens-bg);
+  color: var(--lens-text);
+}
+
+.mf-shell[data-app="lensmini"] .mf-sheet,
+.mf-shell[data-app="lensmini"] .mf-modal {
+  background: var(--lens-surface);
+  border: 1px solid var(--lens-border);
+  box-shadow: var(--lens-glow-purple);
+}
+
+.mf-shell[data-app="lensmini"] .mf-overlay {
+  background: rgb(5 4 12 / 0.62);
+}
+
+.mf-shell[data-app="lensmini"] .mf-input {
+  background: var(--lens-surface-raised);
+  border-color: var(--lens-border);
+  color: var(--lens-text);
+  min-height: 48px;
+}
+
 .lm-app {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   overflow-x: hidden;
+}
+
+.lm-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lm-brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.lm-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: var(--lens-glow-purple);
+}
+
+.lm-logo-lg {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+}
+
+.lm-brand h1 {
+  margin: 0;
+  font-size: 1.12rem;
+  letter-spacing: -0.02em;
+}
+
+.lm-tagline {
+  margin: 2px 0 0;
+  color: var(--lens-text-muted);
+  font-size: 0.82rem;
+}
+
+.lm-quota {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgb(94 234 212 / 0.35);
+  background: rgb(16 40 42 / 0.7);
+  color: var(--lens-cyan);
+  font-size: 0.78rem;
+  font-weight: 650;
+  display: inline-flex;
+  align-items: center;
 }
 
 .lm-toolbar,
@@ -17,18 +126,44 @@
   align-items: center;
 }
 
+.mf-shell[data-app="lensmini"] main {
+  color: var(--lens-text);
+}
+
 .lm-toolbar {
   justify-content: space-between;
+}
+
+.lm-icon-btn {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--lens-border);
+  background: var(--lens-surface);
+  color: var(--lens-text);
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 1.05rem;
+}
+
+.lm-icon-btn:focus-visible,
+.lm-lang-btn:focus-visible,
+.lm-shutter:focus-visible,
+.lm-btn:focus-visible {
+  outline: 2px solid var(--lens-cyan);
+  outline-offset: 2px;
 }
 
 .lm-viewport {
   position: relative;
   width: 100%;
   aspect-ratio: 3 / 4;
-  max-height: 58dvh;
-  background: #0b0d12;
-  border-radius: 18px;
+  max-height: 54dvh;
+  background: #05040c;
+  border-radius: 24px;
   overflow: hidden;
+  border: 1px solid var(--lens-border);
+  box-shadow: var(--lens-glow-purple);
 }
 
 .lm-video,
@@ -39,6 +174,44 @@
   display: block;
 }
 
+.lm-vignette {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 48%, rgb(5 4 12 / 0.42) 100%);
+}
+
+.lm-corners {
+  pointer-events: none;
+  position: absolute;
+  inset: 18px;
+}
+
+.lm-corners span {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgb(167 139 250 / 0.85);
+}
+
+.lm-corners .tl { top: 0; left: 0; border-right: 0; border-bottom: 0; border-radius: 4px 0 0 0; }
+.lm-corners .tr { top: 0; right: 0; border-left: 0; border-bottom: 0; border-radius: 0 4px 0 0; }
+.lm-corners .bl { bottom: 0; left: 0; border-right: 0; border-top: 0; border-radius: 0 0 0 4px; }
+.lm-corners .br { bottom: 0; right: 0; border-left: 0; border-top: 0; border-radius: 0 0 4px 0; }
+
+.lm-hint {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  margin: 0;
+  color: rgb(248 247 255 / 0.86);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.7);
+}
+
 .lm-fallback,
 .lm-overlay-msg {
   position: absolute;
@@ -47,17 +220,30 @@
   place-items: center;
   padding: 20px;
   text-align: center;
-  color: #f8fafc;
-  background: color-mix(in srgb, #0b0d12 55%, transparent);
+  color: var(--lens-text);
+  background: color-mix(in srgb, #05040c 55%, transparent);
+}
+
+.lm-overlay-msg p {
+  margin: 4px 0 0;
+  color: var(--lens-text-muted);
+}
+
+.lm-capture-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
 .lm-shutter {
-  width: 74px;
-  height: 74px;
+  width: 76px;
+  height: 76px;
   border-radius: 999px;
-  border: 6px solid color-mix(in srgb, var(--mf-accent) 35%, white);
-  background: var(--mf-accent);
-  margin: 4px auto 0;
+  border: 3px solid rgb(196 181 253 / 0.55);
+  background: var(--lens-gradient-primary);
+  box-shadow: var(--lens-glow-purple);
+  margin: 2px auto 0;
   display: block;
 }
 
@@ -65,14 +251,124 @@
   opacity: 0.45;
 }
 
+.lm-upload-link {
+  border: 0;
+  background: none;
+  color: var(--lens-cyan);
+  min-height: 44px;
+  font-weight: 600;
+}
+
 .lm-lang-btn,
 .lm-text-btn {
-  border: 0;
-  background: var(--mf-surface);
+  border: 1px solid var(--lens-border);
+  background: var(--lens-surface);
   color: inherit;
   border-radius: 999px;
-  min-height: 40px;
-  padding: 0 12px;
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.lm-lang-btn {
+  font-weight: 650;
+}
+
+.lm-history-item .lm-translated {
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.mf-shell[data-app="lensmini"] .mf-sheet h2 {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 0 8px;
+  padding-bottom: 8px;
+  background: var(--lens-surface);
+}
+
+.lm-shutter:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.lm-result-card,
+.lm-history-item {
+  background: var(--lens-surface);
+  border: 1px solid var(--lens-border);
+  border-radius: 20px;
+  padding: 14px;
+  box-shadow: 0 0 24px rgb(88 60 200 / 0.12);
+}
+
+.lm-result-card {
+  animation: lm-fade 180ms ease;
+}
+
+@keyframes lm-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lm-result-card,
+  .lm-shutter {
+    animation: none;
+    transition: none;
+  }
+  .lm-shutter:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+.lm-toolbar-end {
+  display: flex;
+  gap: 8px;
+}
+
+.lm-divider {
+  border: 0;
+  border-top: 1px solid var(--lens-border);
+  margin: 4px 0 12px;
+}
+
+.lm-menu-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.lm-menu-stack .mf-btn {
+  width: 100%;
+}
+
+.lm-actions .lm-btn {
+  flex: 1 1 0;
+  min-width: 92px;
+}
+
+.lm-pair {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lens-purple);
+}
+
+.lm-pair span {
+  color: var(--lens-text-muted);
+}
+
+.lm-pair .lm-to {
+  color: var(--lens-cyan);
+}
+
+.mf-shell[data-app="lensmini"] .mf-sheet {
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mf-shell[data-app="lensmini"] .mf-sheet {
+    transition: none;
+  }
 }
 
 .lm-kicker {
@@ -80,26 +376,27 @@
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--mf-muted);
+  color: var(--lens-text-muted);
 }
 
 .lm-translated {
   margin: 4px 0 12px;
-  font-size: 1.35rem;
+  font-size: 1.32rem;
   line-height: 1.35;
   font-weight: 650;
+  color: var(--lens-text);
 }
 
 .lm-original {
   margin: 4px 0 12px;
-  color: var(--mf-muted);
+  color: var(--lens-text-muted);
   white-space: pre-wrap;
 }
 
 .lm-privacy,
 .lm-muted,
 .lm-target-label {
-  color: var(--mf-muted);
+  color: var(--lens-text-muted);
   font-size: 0.82rem;
   margin: 0;
 }
@@ -109,20 +406,24 @@
   padding: 0;
   background: none;
   width: 100%;
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
-  max-height: 160px;
+  max-height: 140px;
 }
 
 .lm-preview-wrap .lm-preview {
-  max-height: 160px;
+  max-height: 140px;
 }
 
 .lm-history-item {
-  background: var(--mf-surface);
-  border-radius: 14px;
-  padding: 12px;
   margin-bottom: 10px;
+}
+
+.lm-history-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
 }
 
 .lm-lang-list {
@@ -144,9 +445,44 @@
   padding: 8px 4px;
 }
 
+.lm-lang-row span {
+  color: var(--lens-text-muted);
+  font-size: 0.78rem;
+}
+
 .lm-lang-row.is-active {
-  color: var(--mf-accent);
+  color: var(--lens-cyan);
   font-weight: 650;
+}
+
+.lm-btn {
+  min-height: 48px;
+  border: 0;
+  border-radius: 16px;
+  padding: 0 16px;
+  font-weight: 650;
+  color: #fff;
+}
+
+.lm-btn-copy {
+  background: var(--lens-purple);
+}
+
+.lm-btn-speak {
+  background: var(--lens-indigo);
+}
+
+.lm-btn-retake,
+.lm-btn-ghost {
+  background: transparent;
+  color: var(--lens-cyan);
+  border: 1px solid var(--lens-border);
+}
+
+.lm-btn-open {
+  background: var(--lens-surface-raised);
+  color: var(--lens-text);
+  border: 1px solid var(--lens-border);
 }
 
 .lm-busy {
@@ -154,9 +490,24 @@
   left: 50%;
   bottom: calc(24px + var(--mf-safe-bottom));
   transform: translateX(-50%);
-  background: var(--mf-fg);
-  color: var(--mf-bg);
+  background: var(--lens-surface-raised);
+  color: var(--lens-text);
+  border: 1px solid var(--lens-border);
   border-radius: 999px;
   padding: 10px 16px;
   z-index: 40;
+}
+
+.lm-cta {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lm-shutter,
+  .mf-sheet,
+  .lm-result-card {
+    transition: none;
+  }
 }

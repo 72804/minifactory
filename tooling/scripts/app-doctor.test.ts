@@ -1,5 +1,6 @@
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { inspectVercelJson, requiredEnvNames } from "./app-doctor.ts";
+import { inspectVercelJson, listingAssetsPresent, requiredEnvNames } from "./app-doctor.ts";
 
 describe("app:doctor helpers", () => {
   it("requires OpenAI key names only when ai is enabled", () => {
@@ -20,5 +21,9 @@ describe("app:doctor helpers", () => {
     expect(good.publicOutput).toBe(false);
     expect(good.scopedBuild).toBe(true);
     expect(good.turboIgnore).toBe(true);
+  });
+
+  it("requires LensMini listing PNGs", () => {
+    expect(listingAssetsPresent(join(process.cwd(), "apps/lensmini"))).toBe(true);
   });
 });

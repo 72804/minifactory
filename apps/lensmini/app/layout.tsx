@@ -8,6 +8,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: appConfig.name,
   description: appConfig.description,
+  icons: {
+    icon: appConfig.logo,
+    apple: appConfig.logo,
+  },
 };
 
 export const viewport: Viewport = {
@@ -15,7 +19,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: appConfig.theme.accent,
+  themeColor: "#07060f",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
