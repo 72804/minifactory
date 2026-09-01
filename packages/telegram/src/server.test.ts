@@ -1,12 +1,12 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { resetServerEnvCache } from "@minifactory/config/env";
-import { authenticateTelegramRequest, validateInitData } from "./server";
+import { authenticateTelegramRequest, buildInitDataCheckString, validateInitData } from "./server";
 
 function signInitData(botToken: string, fields: Record<string, string>): string {
   const params = new URLSearchParams(fields);
   const checkString = Array.from(params.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([key, value]) => `${key}=${value}`)
     .join("\n");
   const secret = createHmac("sha256", "WebAppData").update(botToken).digest();
@@ -17,6 +17,7 @@ function signInitData(botToken: string, fields: Record<string, string>): string 
 
 const TOKEN = "123456:TEST_TOKEN";
 const user = JSON.stringify({ id: 42, first_name: "Ada" });
+const SIGNATURE = "third-party-ed25519-placeholder";
 
 describe("validateInitData", () => {
   it("rejects empty initData", () => {
@@ -26,29 +27,44 @@ describe("validateInitData", () => {
     ).toThrow(/Missing Telegram authorization/);
   });
 
-  it("accepts a correctly signed payload", () => {
+  it("accepts valid initData without a signature field", () => {
     const initData = signInitData(TOKEN, {
       auth_date: String(Math.floor(Date.now() / 1000)),
       user,
     });
+    const { checkString } = buildInitDataCheckString(initData);
+    expect(checkString.includes("signature=")).toBe(false);
     const session = validateInitData(initData, TOKEN);
     expect(session.user.telegramId).toBe("42");
     expect(session.mock).toBe(false);
   });
 
-  it("ignores Telegram signature when computing the bot-token HMAC hash", () => {
+  it("accepts valid initData with signature included in the HMAC data-check-string", () => {
     const initData = signInitData(TOKEN, {
       auth_date: String(Math.floor(Date.now() / 1000)),
+      signature: SIGNATURE,
       user,
     });
-    const withSignature = `${initData}&signature=${encodeURIComponent("third-party-ed25519")}`;
-    const session = validateInitData(withSignature, TOKEN);
+    const { checkString } = buildInitDataCheckString(initData);
+    expect(checkString).toContain(`signature=${SIGNATURE}`);
+    const session = validateInitData(initData, TOKEN);
     expect(session.user.telegramId).toBe("42");
+  });
+
+  it("rejects a tampered signature field", () => {
+    const initData = signInitData(TOKEN, {
+      auth_date: String(Math.floor(Date.now() / 1000)),
+      signature: SIGNATURE,
+      user,
+    });
+    const tampered = initData.replace(encodeURIComponent(SIGNATURE), encodeURIComponent(`${SIGNATURE}-tampered`));
+    expect(() => validateInitData(tampered, TOKEN)).toThrow(/Invalid Telegram initData signature/);
   });
 
   it("rejects a tampered user object even if the client sends one", () => {
     const initData = signInitData(TOKEN, {
       auth_date: String(Math.floor(Date.now() / 1000)),
+      signature: SIGNATURE,
       user,
     });
     const tampered = initData.replace("Ada", "Eve");
@@ -58,9 +74,20 @@ describe("validateInitData", () => {
   it("rejects stale initData using configurable max age", () => {
     const initData = signInitData(TOKEN, {
       auth_date: String(Math.floor(Date.now() / 1000) - 120),
+      signature: SIGNATURE,
       user,
     });
     expect(() => validateInitData(initData, TOKEN, { maxAgeSeconds: 60 })).toThrow(/expired/);
+  });
+
+  it("rejects an invalid hash", () => {
+    const initData = signInitData(TOKEN, {
+      auth_date: String(Math.floor(Date.now() / 1000)),
+      signature: SIGNATURE,
+      user,
+    });
+    const tampered = initData.replace(/hash=[0-9a-f]+/, "hash=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    expect(() => validateInitData(tampered, TOKEN)).toThrow(/Invalid Telegram initData signature/);
   });
 
   it("rejects a valid hash that does not include a user", () => {

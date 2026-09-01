@@ -64,7 +64,6 @@ export function buildInitDataCheckString(initData: string): { hash: string; chec
     throw new TelegramAuthError("initData is missing hash", "invalid_hash");
   }
   params.delete("hash");
-  params.delete("signature");
   const checkString = Array.from(params.entries())
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([key, value]) => `${key}=${value}`)
