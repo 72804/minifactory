@@ -85,6 +85,7 @@ export const telegramPresentationSchema = z.object({
   profileImage: z.string().min(1).optional(),
   startText: z.string().min(1).max(4096).optional(),
   startButtonText: z.string().min(1).max(64).optional(),
+  startPhoto: z.string().min(1).optional(),
   helpText: z.string().min(1).max(4096).optional(),
   privacyText: z.string().min(1).max(4096).optional(),
   commands: z.array(telegramCommandSchema).max(100).optional(),

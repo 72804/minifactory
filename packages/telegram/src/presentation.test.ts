@@ -30,6 +30,7 @@ describe("resolveTelegramPresentation", () => {
         menuButtonText: "Translate",
         profileImage: "public/listing/icon.png",
         startButtonText: "📷 OPEN LENSMINI",
+        startPhoto: "/telegram/lensmini-hero.png",
         commands: [
           { command: "start", description: "Open LensMini" },
           { command: "help", description: "How to use LensMini" },
@@ -40,6 +41,7 @@ describe("resolveTelegramPresentation", () => {
     const resolved = resolveTelegramPresentation(config);
     expect(resolved.menuButtonText).toBe("Translate");
     expect(resolved.profileImage).toBe("public/listing/icon.png");
+    expect(resolved.startPhoto).toBe("/telegram/lensmini-hero.png");
     expect(resolved.commands.map((item) => item.command)).toEqual(["start", "help", "privacy"]);
     expect(resolved.description.includes("OCR")).toBe(false);
   });

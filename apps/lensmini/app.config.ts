@@ -102,6 +102,7 @@ export const appConfig = defineAppConfig({
       "👇 Tap below to start",
     ].join("\n"),
     startButtonText: "📷 OPEN LENSMINI",
+    startPhoto: "/telegram/lensmini-hero.png",
     helpText: [
       "LensMini is simple:",
       "",

@@ -60,6 +60,19 @@ export async function botFetch<T = unknown>(
   return (json.result as T) ?? (json as T);
 }
 
+export async function sendTelegramPhoto(
+  chatId: string | number,
+  photo: string,
+  options?: { caption?: string; replyMarkup?: TelegramReplyMarkup },
+) {
+  return botFetch("sendPhoto", {
+    chat_id: chatId,
+    photo,
+    ...(options?.caption ? { caption: options.caption } : {}),
+    ...(options?.replyMarkup ? { reply_markup: options.replyMarkup } : {}),
+  });
+}
+
 export async function sendTelegramMessage(
   chatId: string | number,
   text: string,

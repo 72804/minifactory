@@ -9,6 +9,7 @@ export type ResolvedTelegramPresentation = {
   profileImage?: string;
   startText: string;
   startButtonText: string;
+  startPhoto?: string;
   helpText?: string;
   privacyText?: string;
   commands: TelegramBotCommand[];
@@ -33,6 +34,7 @@ export function resolveTelegramPresentation(config: AppConfig): ResolvedTelegram
     startText:
       telegram.startText ?? `${config.name}\n\n${tagline}\n\nOpen the Mini App below.`,
     startButtonText: telegram.startButtonText ?? `Open ${config.name}`,
+    startPhoto: telegram.startPhoto,
     helpText: telegram.helpText,
     privacyText: telegram.privacyText,
     commands: telegram.commands ?? [{ command: "start", description: `Open ${config.name}` }],

@@ -168,6 +168,7 @@ export {
   getTelegramBotProfile,
   getTelegramWebhookInfo,
   sendTelegramMessage,
+  sendTelegramPhoto,
   setBotCommands,
   setBotDescription,
   setBotName,

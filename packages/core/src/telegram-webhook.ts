@@ -3,6 +3,7 @@ import { getServerEnv } from "@minifactory/config/env";
 import {
   resolveTelegramPresentation,
   sendTelegramMessage,
+  sendTelegramPhoto,
   TelegramAuthError,
   verifyTelegramWebhookSecret,
 } from "@minifactory/telegram/server";
@@ -39,6 +40,12 @@ export function defaultTelegramStartCopy(config: AppConfig): TelegramStartCopy {
 
 export function miniAppUrl(): string {
   return getServerEnv().APP_BASE_URL.replace(/\/$/, "");
+}
+
+export function telegramPublicAssetUrl(appBaseUrl: string, assetPath: string): string {
+  const base = appBaseUrl.replace(/\/$/, "");
+  const path = assetPath.startsWith("/") ? assetPath : `/${assetPath}`;
+  return `${base}${path}`;
 }
 
 type TelegramUpdate = {
@@ -93,10 +100,22 @@ export async function handleTelegramBotUpdate(
   const url = miniAppUrl();
   const presentation = resolveTelegramPresentation(config);
   if (command === "start") {
-    await sendTelegramMessage(chatId, copy.text, {
-      replyMarkup: webAppInlineKeyboard(copy.buttonText, url),
-    });
-    console.info("[minifactory] telegram_start", { app: config.slug, hasChat: true });
+    const markup = webAppInlineKeyboard(copy.buttonText, url);
+    const photoPath = presentation.startPhoto;
+    if (photoPath) {
+      try {
+        await sendTelegramPhoto(chatId, telegramPublicAssetUrl(url, photoPath), {
+          caption: copy.text,
+          replyMarkup: markup,
+        });
+        console.info("[minifactory] telegram_start", { app: config.slug, hasChat: true, photo: true });
+        return { handled: true, duplicate: false };
+      } catch {
+        console.info("[minifactory] telegram_start_photo_failed", { app: config.slug });
+      }
+    }
+    await sendTelegramMessage(chatId, copy.text, { replyMarkup: markup });
+    console.info("[minifactory] telegram_start", { app: config.slug, hasChat: true, photo: false });
     return { handled: true, duplicate: false };
   }
   if (command === "help" && presentation.helpText) {

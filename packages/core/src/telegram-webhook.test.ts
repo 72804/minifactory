@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isStartCommand, parseBotCommand, webAppInlineKeyboard } from "./telegram-webhook";
+import { isStartCommand, parseBotCommand, telegramPublicAssetUrl, webAppInlineKeyboard } from "./telegram-webhook";
 
 describe("isStartCommand", () => {
   it("accepts /start and /start@bot", () => {
@@ -32,5 +32,13 @@ describe("LensMini /start web app markup", () => {
       ],
     });
     expect("keyboard" in markup).toBe(false);
+  });
+});
+
+describe("telegramPublicAssetUrl", () => {
+  it("builds the LensMini hero URL from APP_BASE_URL", () => {
+    expect(telegramPublicAssetUrl("https://lensmini.vercel.app/", "/telegram/lensmini-hero.png")).toBe(
+      "https://lensmini.vercel.app/telegram/lensmini-hero.png",
+    );
   });
 });
