@@ -1,0 +1,24 @@
+{
+  "name": "@minifactory/create-mini",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "create-mini": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "lint": "eslint src --max-warnings 0",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@minifactory/config": "workspace:*"
+  },
+  "devDependencies": {
+    "@minifactory/eslint-config": "workspace:*",
+    "@types/node": "^24.3.0",
+    "eslint": "^9.35.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

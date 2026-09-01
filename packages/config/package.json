@@ -1,0 +1,29 @@
+{
+  "name": "@minifactory/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./env": "./src/env.ts",
+    "./next": "./src/next.ts",
+    "./security": "./src/security.ts"
+  },
+  "scripts": {
+    "lint": "eslint src --max-warnings 0",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@minifactory/eslint-config": "workspace:*",
+    "@types/node": "^24.3.0",
+    "eslint": "^9.35.0",
+    "next": "16.3.4",
+    "typescript": "^5.9.2"
+  },
+  "peerDependencies": {
+    "next": ">=16"
+  }
+}

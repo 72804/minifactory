@@ -1,0 +1,212 @@
+:root {
+  --mf-accent: #2481cc;
+  --mf-radius: 16px;
+  --mf-font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mf-bg: var(--tg-theme-bg-color, #ffffff);
+  --mf-fg: var(--tg-theme-text-color, #111111);
+  --mf-muted: var(--tg-theme-hint-color, #888888);
+  --mf-surface: var(--tg-theme-secondary-bg-color, #f4f4f5);
+  --mf-button-fg: var(--tg-theme-button-text-color, #ffffff);
+  --mf-danger: var(--tg-theme-destructive-text-color, #e53935);
+  --mf-safe-top: env(safe-area-inset-top, 0px);
+  --mf-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mf-safe-left: env(safe-area-inset-left, 0px);
+  --mf-safe-right: env(safe-area-inset-right, 0px);
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+  background: var(--mf-bg);
+  color: var(--mf-fg);
+  font-family: var(--mf-font);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.mf-shell {
+  min-height: var(--tg-viewport-height, 100dvh);
+  padding: calc(12px + var(--mf-safe-top)) calc(16px + var(--mf-safe-right))
+    calc(16px + var(--mf-safe-bottom)) calc(16px + var(--mf-safe-left));
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.mf-shell-immersive {
+  max-width: 430px;
+  padding: calc(8px + var(--mf-safe-top)) calc(12px + var(--mf-safe-right))
+    calc(12px + var(--mf-safe-bottom)) calc(12px + var(--mf-safe-left));
+}
+
+.mf-shell-immersive .mf-header {
+  margin-bottom: 10px;
+}
+
+.mf-shell-immersive .mf-header h1 {
+  font-size: 1.18rem;
+}
+
+.mf-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.mf-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.mf-header p {
+  margin: 6px 0 0;
+  color: var(--mf-muted);
+  font-size: 0.92rem;
+}
+
+.mf-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mf-btn {
+  min-height: 48px;
+  border: 0;
+  border-radius: var(--mf-radius);
+  padding: 0 16px;
+  background: var(--mf-accent);
+  color: var(--mf-button-fg);
+  font-weight: 650;
+}
+
+.mf-btn:disabled {
+  opacity: 0.55;
+}
+
+.mf-btn-secondary {
+  background: var(--mf-surface);
+  color: var(--mf-fg);
+}
+
+.mf-btn-ghost {
+  background: transparent;
+  color: var(--mf-accent);
+  min-height: 44px;
+}
+
+.mf-icon-btn {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mf-surface);
+  color: var(--mf-fg);
+}
+
+.mf-card {
+  background: var(--mf-surface);
+  border-radius: var(--mf-radius);
+  padding: 16px;
+}
+
+.mf-input,
+.mf-textarea {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--mf-muted) 35%, transparent);
+  background: var(--mf-bg);
+  color: var(--mf-fg);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.mf-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.mf-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.45);
+  display: grid;
+  place-items: end center;
+  z-index: 40;
+}
+
+.mf-modal,
+.mf-sheet {
+  width: min(480px, 100%);
+  background: var(--mf-bg);
+  color: var(--mf-fg);
+  padding: 20px 16px calc(20px + var(--mf-safe-bottom));
+}
+
+.mf-modal {
+  place-self: center;
+  border-radius: var(--mf-radius);
+  margin: 16px;
+  width: min(420px, calc(100% - 32px));
+}
+
+.mf-sheet {
+  border-radius: 20px 20px 0 0;
+}
+
+.mf-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + var(--mf-safe-bottom));
+  transform: translateX(-50%);
+  background: var(--mf-fg);
+  color: var(--mf-bg);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  z-index: 50;
+}
+
+.mf-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid color-mix(in srgb, var(--mf-accent) 25%, transparent);
+  border-top-color: var(--mf-accent);
+  border-radius: 50%;
+  animation: mf-spin 0.7s linear infinite;
+}
+
+@keyframes mf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mf-center {
+  display: grid;
+  place-items: center;
+  min-height: 40vh;
+  text-align: center;
+  gap: 10px;
+}
+
+.mf-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--mf-surface);
+  color: var(--mf-muted);
+  font-size: 0.8rem;
+}

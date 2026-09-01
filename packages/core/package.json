@@ -1,0 +1,39 @@
+{
+  "name": "@minifactory/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts",
+    "./shell": "./src/shell.tsx"
+  },
+  "scripts": {
+    "lint": "eslint src --max-warnings 0",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@minifactory/analytics": "workspace:*",
+    "@minifactory/config": "workspace:*",
+    "@minifactory/db": "workspace:*",
+    "@minifactory/notifications": "workspace:*",
+    "@minifactory/payments": "workspace:*",
+    "@minifactory/telegram": "workspace:*",
+    "@minifactory/ui": "workspace:*",
+    "zod": "^3.25.76"
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@minifactory/eslint-config": "workspace:*",
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "eslint": "^9.35.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "typescript": "^5.9.2"
+  }
+}

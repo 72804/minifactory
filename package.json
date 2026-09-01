@@ -1,0 +1,40 @@
+{
+  "name": "minifactory",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Production factory for launching Telegram Mini Apps",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "dev": "turbo dev --filter=@minifactory/template",
+    "dev:template": "turbo dev --filter=@minifactory/template",
+    "dev:demo": "turbo dev --filter=@minifactory/demo",
+    "dev:lensmini": "turbo dev --filter=@minifactory/lensmini",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:validate": "prisma validate --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:push": "tsx tooling/scripts/require-database-url.ts && prisma db push --schema prisma/schema.prisma",
+    "create-mini": "tsx tooling/create-mini/src/index.ts",
+    "test": "vitest run",
+    "factory:check": "tsx tooling/scripts/factory-check.ts",
+    "factory:prove": "tsx tooling/scripts/factory-prove.ts",
+    "postinstall": "prisma generate --schema prisma/schema.prisma"
+  },
+  "devDependencies": {
+    "@prisma/client": "^6.15.0",
+    "eslint": "^9.35.0",
+    "prettier": "^3.6.2",
+    "prisma": "^6.15.0",
+    "tsx": "^4.20.5",
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

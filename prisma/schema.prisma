@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model App {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appUsers        AppUser[]
+  usageEvents     UsageEvent[]
+  usageCounters   UsageCounter[]
+  analyticsEvents AnalyticsEvent[]
+  referrals       Referral[]
+  purchases       Purchase[]
+  translations    Translation[]
+}
+
+/// Global Telegram identity. One person can use many Mini Apps.
+model User {
+  id           String   @id @default(cuid())
+  telegramId   String   @unique
+  username     String?
+  firstName    String?
+  lastName     String?
+  languageCode String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  appUsers            AppUser[]
+  usageEvents         UsageEvent[]
+  usageCounters       UsageCounter[]
+  analyticsEvents     AnalyticsEvent[]
+  referralsGiven      Referral[]       @relation("Referrer")
+  referralsReceived   Referral[]       @relation("Referee")
+  purchases           Purchase[]
+  translations        Translation[]
+}
+
+model AppUser {
+  id             String   @id @default(cuid())
+  appId          String
+  userId         String
+  firstSeenAt    DateTime @default(now())
+  lastSeenAt     DateTime @updatedAt
+  referralSource String?
+  openCount      Int      @default(0)
+
+  app  App  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([appId, userId])
+  @@index([userId])
+  @@index([appId, lastSeenAt])
+}
+
+model UsageEvent {
+  id        String   @id @default(cuid())
+  appId     String
+  userId    String
+  feature   String
+  amount    Int      @default(1)
+  createdAt DateTime @default(now())
+
+  app  App  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([appId, userId, feature, createdAt])
+}
+
+model UsageCounter {
+  id        String   @id @default(cuid())
+  appId     String
+  userId    String
+  feature   String
+  periodKey String
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  app  App  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([appId, userId, feature, periodKey])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  appId     String
+  userId    String?
+  name      String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  app  App   @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([appId, name, createdAt])
+  @@index([appId, userId, createdAt])
+  @@index([createdAt])
+}
+
+model Referral {
+  id         String   @id @default(cuid())
+  appId      String
+  referrerId String
+  refereeId  String
+  code       String
+  createdAt  DateTime @default(now())
+
+  app      App  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  referrer User @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee  User @relation("Referee", fields: [refereeId], references: [id], onDelete: Cascade)
+
+  @@unique([appId, refereeId])
+  @@index([appId, referrerId])
+  @@index([appId, code])
+}
+
+model Purchase {
+  id                String   @id @default(cuid())
+  appId             String
+  userId            String
+  productId         String
+  provider          String   @default("telegram_stars")
+  externalPaymentId String?
+  amount            Int
+  currency          String   @default("XTR")
+  status            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  app  App  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalPaymentId])
+  @@index([appId, userId, status])
+  @@index([appId, createdAt])
+}
+
+model Translation {
+  id             String   @id @default(cuid())
+  appId          String
+  userId         String
+  sourceLanguage String
+  targetLanguage String
+  originalText   String
+  translatedText String
+  createdAt      DateTime @default(now())
+
+  app  App  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([appId, userId, createdAt])
+}
