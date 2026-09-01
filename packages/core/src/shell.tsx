@@ -19,12 +19,14 @@ import {
 } from "@minifactory/telegram";
 import {
   applySafeAreaVars,
+  describeTelegramClientAuth,
   getTelegramWebApp,
   hapticNotification,
   initTelegramApp,
   openTelegramLink,
   subscribeToViewport,
   telegramAuthHeaders,
+  waitForTelegramInitData,
 } from "@minifactory/telegram/client";
 import {
   Button,
@@ -117,6 +119,9 @@ export function AppShell({ config, children }: ShellProps) {
     let cancelled = false;
     async function boot() {
       try {
+        initTelegramApp();
+        await waitForTelegramInitData();
+        console.info("[minifactory] telegram_boot", describeTelegramClientAuth());
         const response = await factoryFetch("/api/mf/session", { method: "POST" });
         if (!response.ok) {
           throw new Error("Could not start Mini App session");

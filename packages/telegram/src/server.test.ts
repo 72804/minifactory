@@ -19,6 +19,13 @@ const TOKEN = "123456:TEST_TOKEN";
 const user = JSON.stringify({ id: 42, first_name: "Ada" });
 
 describe("validateInitData", () => {
+  it("rejects empty initData", () => {
+    expect(() => validateInitData("", TOKEN)).toThrow(/Missing Telegram initData/);
+    expect(() =>
+      authenticateTelegramRequest(new Request("https://example.com", { method: "POST" })),
+    ).toThrow(/Missing Telegram authorization/);
+  });
+
   it("accepts a correctly signed payload", () => {
     const initData = signInitData(TOKEN, {
       auth_date: String(Math.floor(Date.now() / 1000)),
@@ -27,6 +34,16 @@ describe("validateInitData", () => {
     const session = validateInitData(initData, TOKEN);
     expect(session.user.telegramId).toBe("42");
     expect(session.mock).toBe(false);
+  });
+
+  it("ignores Telegram signature when computing the bot-token HMAC hash", () => {
+    const initData = signInitData(TOKEN, {
+      auth_date: String(Math.floor(Date.now() / 1000)),
+      user,
+    });
+    const withSignature = `${initData}&signature=${encodeURIComponent("third-party-ed25519")}`;
+    const session = validateInitData(withSignature, TOKEN);
+    expect(session.user.telegramId).toBe("42");
   });
 
   it("rejects a tampered user object even if the client sends one", () => {
@@ -44,6 +61,13 @@ describe("validateInitData", () => {
       user,
     });
     expect(() => validateInitData(initData, TOKEN, { maxAgeSeconds: 60 })).toThrow(/expired/);
+  });
+
+  it("rejects a valid hash that does not include a user", () => {
+    const initData = signInitData(TOKEN, {
+      auth_date: String(Math.floor(Date.now() / 1000)),
+    });
+    expect(() => validateInitData(initData, TOKEN)).toThrow(/does not include a user/);
   });
 
   it("uses the provided bot token, not a global default baked into the client", () => {

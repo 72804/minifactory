@@ -7,10 +7,19 @@ import {
   normalizeTelegramUser,
 } from "./index";
 
+export type TelegramAuthFailureCode =
+  | "missing_init_data"
+  | "invalid_hash"
+  | "expired_init_data"
+  | "missing_user";
+
 export class TelegramAuthError extends Error {
-  constructor(message: string) {
+  readonly code: TelegramAuthFailureCode;
+
+  constructor(message: string, code: TelegramAuthFailureCode) {
     super(message);
     this.name = "TelegramAuthError";
+    this.code = code;
   }
 }
 
@@ -52,12 +61,12 @@ export function buildInitDataCheckString(initData: string): { hash: string; chec
   const params = new URLSearchParams(initData);
   const hash = params.get("hash");
   if (!hash) {
-    throw new TelegramAuthError("initData is missing hash");
+    throw new TelegramAuthError("initData is missing hash", "invalid_hash");
   }
   params.delete("hash");
   params.delete("signature");
   const checkString = Array.from(params.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([key, value]) => `${key}=${value}`)
     .join("\n");
   return { hash, checkString };
@@ -69,37 +78,37 @@ export function validateInitData(
   options?: { maxAgeSeconds?: number; nowSeconds?: number },
 ): ValidatedTelegramSession {
   if (!initData) {
-    throw new TelegramAuthError("Missing Telegram initData");
+    throw new TelegramAuthError("Missing Telegram initData", "missing_init_data");
   }
   if (!botToken) {
-    throw new TelegramAuthError("TELEGRAM_BOT_TOKEN is not configured");
+    throw new TelegramAuthError("TELEGRAM_BOT_TOKEN is not configured", "invalid_hash");
   }
 
   const { hash, checkString } = buildInitDataCheckString(initData);
   const secretKey = hmacSha256("WebAppData", botToken);
   const computed = hmacSha256(secretKey, checkString);
   if (!safeEqualHex(hash, computed)) {
-    throw new TelegramAuthError("Invalid Telegram initData signature");
+    throw new TelegramAuthError("Invalid Telegram initData signature", "invalid_hash");
   }
 
   const params = new URLSearchParams(initData);
   const authDateRaw = params.get("auth_date");
   const authDate = authDateRaw ? Number(authDateRaw) : NaN;
   if (!Number.isFinite(authDate)) {
-    throw new TelegramAuthError("Invalid auth_date");
+    throw new TelegramAuthError("Invalid auth_date", "invalid_hash");
   }
   const now = options?.nowSeconds ?? Math.floor(Date.now() / 1000);
   const maxAge = options?.maxAgeSeconds ?? getServerEnv().TELEGRAM_INIT_DATA_MAX_AGE_SECONDS;
   if (authDate > now + 60) {
-    throw new TelegramAuthError("Telegram initData auth_date is in the future");
+    throw new TelegramAuthError("Telegram initData auth_date is in the future", "expired_init_data");
   }
   if (now - authDate > maxAge) {
-    throw new TelegramAuthError("Telegram initData has expired");
+    throw new TelegramAuthError("Telegram initData has expired", "expired_init_data");
   }
 
   const user = parseUser(params.get("user") ?? undefined);
   if (!user) {
-    throw new TelegramAuthError("Telegram initData does not include a user");
+    throw new TelegramAuthError("Telegram initData does not include a user", "missing_user");
   }
 
   return {
@@ -117,7 +126,7 @@ export function authenticateTelegramRequest(request: Request): ValidatedTelegram
 
   if (scheme === "tma-mock") {
     if (isProductionEnv() || !isTelegramMockAllowed()) {
-      throw new TelegramAuthError("Mock Telegram auth is disabled");
+      throw new TelegramAuthError("Mock Telegram auth is disabled", "missing_init_data");
     }
     return {
       user: MOCK_TELEGRAM_USER,
@@ -128,7 +137,7 @@ export function authenticateTelegramRequest(request: Request): ValidatedTelegram
   }
 
   if (scheme !== "tma") {
-    throw new TelegramAuthError("Missing Telegram authorization");
+    throw new TelegramAuthError("Missing Telegram authorization", "missing_init_data");
   }
 
   return validateInitData(payload);
@@ -137,15 +146,15 @@ export function authenticateTelegramRequest(request: Request): ValidatedTelegram
 export function verifyTelegramWebhookSecret(request: Request): void {
   const expected = getServerEnv().TELEGRAM_WEBHOOK_SECRET;
   if (!expected) {
-    throw new TelegramAuthError("TELEGRAM_WEBHOOK_SECRET is not configured");
+    throw new TelegramAuthError("TELEGRAM_WEBHOOK_SECRET is not configured", "invalid_hash");
   }
   const provided =
     request.headers.get("x-telegram-bot-api-secret-token") ??
     request.headers.get("x-telegram-webhook-secret");
   if (!provided) {
-    throw new TelegramAuthError("Missing webhook secret");
+    throw new TelegramAuthError("Missing webhook secret", "missing_init_data");
   }
   if (!safeEqualText(provided, expected)) {
-    throw new TelegramAuthError("Invalid webhook secret");
+    throw new TelegramAuthError("Invalid webhook secret", "invalid_hash");
   }
 }

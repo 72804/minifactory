@@ -51,6 +51,8 @@ type TelegramHaptic = {
 
 export type TelegramWebApp = {
   initData: string;
+  version?: string;
+  platform?: string;
   initDataUnsafe: {
     user?: {
       id: number;
@@ -108,8 +110,63 @@ export function initTelegramApp(): TelegramWebApp | null {
   return webApp;
 }
 
+export function initDataFromFragment(hash: string): string {
+  const fragment = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (!fragment) {
+    return "";
+  }
+  return new URLSearchParams(fragment).get("tgWebAppData") ?? "";
+}
+
 export function getInitDataRaw(): string {
-  return getTelegramWebApp()?.initData ?? "";
+  const fromWebApp = getTelegramWebApp()?.initData?.trim() ?? "";
+  if (fromWebApp) {
+    return fromWebApp;
+  }
+  if (typeof window === "undefined") {
+    return "";
+  }
+  return initDataFromFragment(window.location.hash);
+}
+
+export async function waitForTelegramInitData(timeoutMs = 1000): Promise<string> {
+  const immediate = getInitDataRaw();
+  if (immediate) {
+    return immediate;
+  }
+  const inTelegramSurface =
+    typeof window !== "undefined" &&
+    (Boolean(window.Telegram?.WebApp) || window.location.hash.includes("tgWebAppData"));
+  if (!inTelegramSurface) {
+    return "";
+  }
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const next = getInitDataRaw();
+    if (next) {
+      return next;
+    }
+  }
+  return getInitDataRaw();
+}
+
+export function describeTelegramClientAuth(): {
+  telegramObjectPresent: boolean;
+  initDataPresent: boolean;
+  initDataLength: number;
+  platform: string | null;
+  version: string | null;
+} {
+  const webApp = getTelegramWebApp();
+  const initData = getInitDataRaw();
+  return {
+    telegramObjectPresent: Boolean(webApp),
+    initDataPresent: initData.length > 0,
+    initDataLength: initData.length,
+    platform: typeof webApp?.platform === "string" ? webApp.platform : null,
+    version: typeof webApp?.version === "string" ? webApp.version : null,
+  };
 }
 
 export function getStartParam(): string | undefined {

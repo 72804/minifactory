@@ -6,20 +6,28 @@ import { createSession, requireIdentity } from "./session";
 import { consumeUsage, UsageLimitError } from "./usage";
 import { z } from "zod";
 
-function jsonError(error: unknown): Response {
+function isDatabaseFailure(error: unknown): boolean {
+  const name = error && typeof error === "object" && "name" in error ? String(error.name) : "";
+  const message = error instanceof Error ? error.message : "";
+  return (
+    name.startsWith("Prisma") ||
+    message.includes("DATABASE_URL") ||
+    message.includes("P1010") ||
+    message.includes("P1000") ||
+    message.includes("P1001")
+  );
+}
+
+function jsonError(error: unknown, app?: string): Response {
   if (error instanceof TelegramAuthError) {
-    return Response.json({ error: error.message }, { status: 401 });
+    console.info("[minifactory] session_auth_failed", { app: app ?? null, code: error.code });
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const message = error instanceof Error ? error.message : "Request failed";
-  if (message.includes("DATABASE_URL") || message.includes("P1010") || message.includes("P1000")) {
-    return Response.json(
-      {
-        error:
-          "Database is not ready. Set a writable DATABASE_URL in the root .env (not the example postgres/postgres URL), then run pnpm db:push.",
-      },
-      { status: 503 },
-    );
+  if (isDatabaseFailure(error)) {
+    console.info("[minifactory] session_auth_failed", { app: app ?? null, code: "database_failure" });
+    return Response.json({ error: "Could not start Mini App session" }, { status: 503 });
   }
+  console.info("[minifactory] request_failed", { app: app ?? null });
   return Response.json({ error: "Server error" }, { status: 500 });
 }
 
@@ -30,7 +38,7 @@ export function createSessionRoute(config: AppConfig) {
         const session = await createSession(request, config);
         return Response.json(session);
       } catch (error) {
-        return jsonError(error);
+        return jsonError(error, config.slug);
       }
     },
   };
@@ -43,7 +51,7 @@ export function createAnalyticsRoute(config: AppConfig) {
       try {
         return await handler(request);
       } catch (error) {
-        return jsonError(error);
+        return jsonError(error, config.slug);
       }
     },
   };
@@ -107,7 +115,7 @@ export function createTextProcessRoute(config: AppConfig, feature = "process") {
           throw error;
         }
       } catch (error) {
-        return jsonError(error);
+        return jsonError(error, config.slug);
       }
     },
   };

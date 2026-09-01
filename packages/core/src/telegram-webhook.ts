@@ -56,6 +56,12 @@ export function isStartCommand(text: string | undefined): boolean {
   return /^\/start(?:@\w+)?(?:\s|$)/i.test(text.trim());
 }
 
+export function webAppInlineKeyboard(buttonText: string, url: string) {
+  return {
+    inline_keyboard: [[{ text: buttonText, web_app: { url } }]],
+  };
+}
+
 export async function handleTelegramBotUpdate(
   config: AppConfig,
   update: TelegramUpdate,
@@ -72,9 +78,7 @@ export async function handleTelegramBotUpdate(
   }
   const url = miniAppUrl();
   await sendTelegramMessage(chatId, copy.text, {
-    replyMarkup: {
-      inline_keyboard: [[{ text: copy.buttonText, web_app: { url } }]],
-    },
+    replyMarkup: webAppInlineKeyboard(copy.buttonText, url),
   });
   console.info("[minifactory] telegram_start", { app: config.slug, hasChat: true });
   return { handled: true, duplicate: false };

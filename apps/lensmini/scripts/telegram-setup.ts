@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { getServerEnv, resetServerEnvCache } from "@minifactory/config/env";
 import {
   getTelegramBotProfile,
@@ -8,36 +9,63 @@ import {
   setTelegramWebhook,
 } from "@minifactory/notifications";
 
-function loadEnv(): void {
-  for (const name of [".env", ".env.local", "apps/lensmini/.env.local"]) {
-    const path = resolve(process.cwd(), name);
+const APP_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const REPO_ROOT = resolve(APP_DIR, "../..");
+
+function parseEnvFile(path: string): Record<string, string> {
+  const parsed: Record<string, string> = {};
+  if (!existsSync(path)) {
+    return parsed;
+  }
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) {
+      continue;
+    }
+    const eq = trimmed.indexOf("=");
+    const key = trimmed.slice(0, eq);
+    let value = trimmed.slice(eq + 1);
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    parsed[key] = value;
+  }
+  return parsed;
+}
+
+function loadEnv(): string[] {
+  const preset = new Set(
+    Object.keys(process.env).filter((key) => process.env[key] !== undefined),
+  );
+  const loaded: string[] = [];
+  const fromFiles: Record<string, string> = {};
+  for (const path of [
+    resolve(REPO_ROOT, ".env"),
+    resolve(REPO_ROOT, ".env.local"),
+    resolve(APP_DIR, ".env.local"),
+  ]) {
     if (!existsSync(path)) {
       continue;
     }
-    for (const line of readFileSync(path, "utf8").split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) {
-        continue;
-      }
-      const eq = trimmed.indexOf("=");
-      const key = trimmed.slice(0, eq);
-      let value = trimmed.slice(eq + 1);
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))
-      ) {
-        value = value.slice(1, -1);
-      }
-      if (process.env[key] === undefined) {
-        process.env[key] = value;
-      }
+    loaded.push(path);
+    Object.assign(fromFiles, parseEnvFile(path));
+  }
+  for (const [key, value] of Object.entries(fromFiles)) {
+    if (!preset.has(key)) {
+      process.env[key] = value;
     }
   }
   resetServerEnvCache();
+  return loaded;
 }
 
 async function main() {
-  loadEnv();
+  const loaded = loadEnv();
+  const envFiles = loaded.map((path) => relative(REPO_ROOT, path) || path);
+  console.log(`envFiles=${envFiles.join(",") || "(none)"}`);
   const env = getServerEnv();
   const base = env.APP_BASE_URL.replace(/\/$/, "");
   if (!base.startsWith("https://")) {
@@ -48,6 +76,13 @@ async function main() {
   }
   if (!env.TELEGRAM_WEBHOOK_SECRET) {
     throw new Error("TELEGRAM_WEBHOOK_SECRET is not set for LensMini.");
+  }
+  console.log(`miniApp=${base}`);
+  if (process.argv.includes("--dry-run")) {
+    console.log(
+      `loadedLensMiniEnv=${envFiles.includes("apps/lensmini/.env.local") ? "yes" : "no"}`,
+    );
+    return;
   }
   const webhookUrl = `${base}/api/telegram/webhook`;
   await setTelegramWebhook(webhookUrl, env.TELEGRAM_WEBHOOK_SECRET);
